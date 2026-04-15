@@ -12,6 +12,10 @@ Study material and an interactive browser-based quiz for the **Red Hat Certified
 - **EX374-study-guide.md** — Practical examples for every exam objective, environment setup checklist, survival commands, and exam tips.
 - **ex374-quiz.html** — A single-file, zero-dependency quiz game playable in any browser. Multiple choice, type-the-command, and flashcard modes with ~75 questions across all objective areas.
 
+## Recommended training
+
+This project is not a substitute for proper training. If you are serious about passing the exam, I strongly recommend taking the official [DO374 — Developing Advanced Automation with Red Hat Ansible Automation Platform](https://www.redhat.com/en/services/training/do374-developing-advanced-automation-ansible-automation-platform) course from Red Hat. It covers all objectives in depth with hands-on labs on a real AAP environment.
+
 ## Did it work?
 
 You can verify my certification status here: [Red Hat Certification ID 250-146-230](https://rhtapps.redhat.com/verify?certId=250-146-230)
