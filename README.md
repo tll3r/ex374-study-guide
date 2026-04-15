@@ -14,7 +14,7 @@ Study material and an interactive browser-based quiz for the **Red Hat Certified
 
 ## Recommended training
 
-This project is not a substitute for proper training. If you are serious about passing the exam, I strongly recommend taking the official [DO374 — Developing Advanced Automation with Red Hat Ansible Automation Platform](https://www.redhat.com/en/services/training/do374-developing-advanced-automation-ansible-automation-platform) course from Red Hat. It covers all objectives in depth with hands-on labs on a real AAP environment.
+This project is not a substitute for proper training. If you are serious about passing the exam, I strongly recommend taking the official [AU374 — Developing Advanced Automation with Red Hat Ansible Automation Platform](https://www.redhat.com/en/services/training/au374-developing-advanced-automation-red-hat-ansible-automation-platform) course from Red Hat. It covers all objectives in depth with hands-on labs on a real AAP environment.
 
 ## Did it work?
 
