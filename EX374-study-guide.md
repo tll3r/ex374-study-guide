@@ -208,10 +208,11 @@ cd exam-project
 
 ---
 
-## 0.9 Practice Questions (from exam dumps and community reports)
+## 0.9 Practice Exercises
 
-These are representative tasks similar to what you may encounter.
-**The real exam is performance-based — you do the work, not answer questions.**
+Self-test tasks derived from the published exam objectives.
+Try to complete each one without looking at the guide above.
+**Remember: the real exam is performance-based — you do the work, not answer questions.**
 
 **Git:**
 - Clone a repo, create a `.gitignore` excluding `*.log`, commit and push
