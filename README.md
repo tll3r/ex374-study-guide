@@ -12,6 +12,10 @@ Study material and an interactive browser-based quiz for the **Red Hat Certified
 - **EX374-study-guide.md** — Practical examples for every exam objective, environment setup checklist, survival commands, and exam tips.
 - **ex374-quiz.html** — A single-file, zero-dependency quiz game playable in any browser. Multiple choice, type-the-command, and flashcard modes with ~75 questions across all objective areas.
 
+## Did it work?
+
+You can verify my certification status here: [Red Hat Certification ID 250-146-230](https://rhtapps.redhat.com/verify?certId=250-146-230)
+
 Red Hat and Ansible are trademarks of Red Hat, Inc.
 
 ## Contributing
