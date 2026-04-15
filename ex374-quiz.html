@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EX374 Study Game</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --accent: #6c5ce7;
+    --accent-glow: #6c5ce744;
+    --green: #00b894;
+    --red: #e17055;
+    --yellow: #fdcb6e;
+    --text: #e2e4ea;
+    --text-dim: #8891a4;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    transition: background 0.5s ease;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  header { text-align: center; padding: 30px 0 10px; }
+  header h1 {
+    font-size: 1.8rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #a29bfe);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    transition: all 0.5s ease;
+  }
+  header p { color: var(--text-dim); margin-top: 4px; font-size: 0.9rem; }
+  .stats { display: flex; gap: 12px; justify-content: center; margin: 16px 0 24px; flex-wrap: wrap; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center; min-width: 90px; transition: all 0.4s; }
+  .stat-val { font-size: 1.3rem; font-weight: 700; }
+  .stat-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-val.green { color: var(--green); }
+  .stat-val.red { color: var(--red); }
+  .stat-val.yellow { color: var(--yellow); }
+  .stat-val.accent { color: var(--accent); }
+  .progress-wrap { background: var(--surface2); border-radius: 6px; height: 6px; margin-bottom: 24px; overflow: hidden; transition: background 0.4s; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), #a29bfe); border-radius: 6px; transition: width 0.4s ease, background 0.5s; }
+  .modes { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .mode-btn {
+    flex: 1; min-width: 120px; padding: 10px 12px; background: var(--surface);
+    border: 2px solid var(--border); border-radius: var(--radius); color: var(--text);
+    font-size: 0.85rem; cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .mode-btn:hover { border-color: var(--accent); background: var(--surface2); }
+  .mode-btn.active { border-color: var(--accent); background: var(--accent-glow); }
+  .categories { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .cat-btn {
+    padding: 5px 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; color: var(--text-dim); font-size: 0.75rem; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .cat-btn:hover { color: var(--text); border-color: var(--accent); }
+  .cat-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px; margin-bottom: 20px; position: relative; min-height: 200px; transition: all 0.4s;
+  }
+  .card-cat {
+    display: inline-block; padding: 3px 10px; background: var(--accent-glow); color: var(--accent);
+    border-radius: 20px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 16px; transition: all 0.4s;
+  }
+  .card-q { font-size: 1.15rem; font-weight: 600; margin-bottom: 20px; line-height: 1.6; }
+  code, .code-block {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    background: var(--bg); border-radius: 6px; font-size: 0.85rem; transition: background 0.4s;
+  }
+  code { padding: 2px 6px; }
+  .code-block {
+    display: block; padding: 14px 16px; margin: 10px 0; overflow-x: auto;
+    white-space: pre; border: 1px solid var(--border); line-height: 1.6;
+  }
+  .choices { display: flex; flex-direction: column; gap: 8px; }
+  .choice-btn {
+    padding: 12px 16px; background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 0.9rem; cursor: pointer;
+    transition: all 0.15s; text-align: left; font-family: inherit; line-height: 1.4;
+  }
+  .choice-btn:hover:not(.locked) { border-color: var(--accent); transform: translateX(4px); }
+  .choice-btn.correct { border-color: var(--green); background: #00b89418; }
+  .choice-btn.wrong { border-color: var(--red); background: #e1705518; }
+  .choice-btn.locked { cursor: default; }
+  .choice-btn .choice-letter {
+    display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center;
+    border-radius: 6px; background: var(--border); font-size: 0.75rem; font-weight: 700; margin-right: 10px;
+  }
+  .type-input {
+    width: 100%; padding: 12px 16px; background: var(--bg); border: 2px solid var(--border);
+    border-radius: 10px; color: var(--text);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+  }
+  .type-input:focus { border-color: var(--accent); }
+  .type-input.correct { border-color: var(--green); }
+  .type-input.wrong { border-color: var(--red); }
+  .type-hint { color: var(--text-dim); font-size: 0.8rem; margin-top: 8px; }
+  .flashcard {
+    cursor: pointer; text-align: center; min-height: 180px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; user-select: none;
+  }
+  .flashcard .flip-hint { color: var(--text-dim); font-size: 0.8rem; margin-top: 16px; }
+  .flashcard-answer { color: var(--green); font-size: 1rem; max-width: 100%; }
+  .feedback { margin-top: 16px; padding: 12px 16px; border-radius: 10px; font-size: 0.85rem; line-height: 1.5; display: none; }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: #00b89418; border: 1px solid #00b89444; }
+  .feedback.wrong-fb { background: #e1705518; border: 1px solid #e1705544; }
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .btn {
+    padding: 10px 24px; border-radius: 10px; border: none; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #7c6ef0; transform: translateY(-1px); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-submit { background: var(--green); color: white; }
+  .btn-submit:hover { background: #00a884; }
+  kbd {
+    display: inline-block; padding: 2px 6px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; font-size: 0.75rem; font-family: inherit; color: var(--text-dim);
+  }
+  .key-hints { text-align: center; margin-top: 12px; font-size: 0.75rem; color: var(--text-dim); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+  .empty-state h2 { color: var(--text); margin-bottom: 8px; }
+  @media (max-width: 600px) {
+    .container { padding: 12px; }
+    .card { padding: 20px; }
+    header h1 { font-size: 1.4rem; }
+    .card-q { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>EX374 Study Game</h1>
+    <p>Red Hat Certified Specialist in Developing Automation with Ansible Automation Platform</p>
+  </header>
+  <div class="stats">
+    <div class="stat"><div class="stat-val accent" id="s-current">0</div><div class="stat-label">Question</div></div>
+    <div class="stat"><div class="stat-val green" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat"><div class="stat-val red" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat"><div class="stat-val yellow" id="s-streak">0</div><div class="stat-label">Streak</div></div>
+    <div class="stat"><div class="stat-val" id="s-pct">0%</div><div class="stat-label">Score</div></div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress" style="width:0%"></div></div>
+  <div class="modes">
+    <button class="mode-btn active" data-mode="mc">Multiple Choice</button>
+    <button class="mode-btn" data-mode="type">Type the Command</button>
+    <button class="mode-btn" data-mode="flash">Flashcards</button>
+  </div>
+  <div class="categories" id="cat-filters"></div>
+  <div id="game-area"></div>
+  <div class="key-hints">
+    <kbd>1</kbd>–<kbd>4</kbd> pick answer &nbsp; <kbd>Space</kbd> / <kbd>Enter</kbd> next &nbsp; <kbd>R</kbd> restart
+  </div>
+</div>
+<script>
+// Theme palettes per mode
+const themes = {
+  mc:    {bg:"#0f1117",surface:"#1a1d27",surface2:"#242836",border:"#2e3345",accent:"#6c5ce7",accentGlow:"#6c5ce744"},
+  type:  {bg:"#0b1519",surface:"#13222a",surface2:"#1b3040",border:"#254050",accent:"#0abde3",accentGlow:"#0abde344"},
+  flash: {bg:"#17130f",surface:"#261f17",surface2:"#352b20",border:"#4a3d2e",accent:"#f0932b",accentGlow:"#f0932b44"},
+};
+function applyTheme(m) {
+  const t = themes[m];
+  const r = document.documentElement.style;
+  r.setProperty("--bg", t.bg);
+  r.setProperty("--surface", t.surface);
+  r.setProperty("--surface2", t.surface2);
+  r.setProperty("--border", t.border);
+  r.setProperty("--accent", t.accent);
+  r.setProperty("--accent-glow", t.accentGlow);
+}
+
+const Q = [
+  // === Git ===
+  {cat:"Git", q:"You need a local copy of a remote repository accessible over SSH. What do you run?",
+    choices:["git clone git@host:org/repo.git","git pull git@host:org/repo.git","git fetch --all git@host:org/repo.git","git init --remote git@host:org/repo.git"], answer:0,
+    typed:"git clone git@git.example.com:automation/repo.git", accept:["git clone"]},
+  {cat:"Git", q:"You want to start working on a feature in an isolated branch. What single command creates it and moves you there?",
+    choices:["git checkout -b feature-x","git branch --move feature-x","git stash apply feature-x","git merge --new feature-x"], answer:0,
+    typed:"git checkout -b feature-x", accept:["checkout -b","switch -c"]},
+  {cat:"Git", q:"You ran <code>git add myfile.yml</code>. Which command shows what will be included in the next snapshot?",
+    choices:["git diff --cached","git diff","git status --verbose","git log --staged"], answer:0,
+    typed:"git diff --cached", accept:["diff --cached"]},
+  {cat:"Git", q:"You want to prevent <code>*.retry</code> and <code>*.log</code> from ever being tracked. Where do you configure this?",
+    choices:[".gitignore",".gitconfig",".gitattributes",".gitmodules"], answer:0,
+    typed:".gitignore", accept:[".gitignore"]},
+  {cat:"Git", q:"Your local changes are tested and ready. Get them from the working tree all the way to the remote in one line.",
+    choices:["git add . && git commit -m 'msg' && git push","git commit --all --push origin main","git save --remote main","git sync --upstream origin main"], answer:0,
+    typed:"git add . && git commit -m \"msg\" && git push origin main", accept:["git add","git commit","git push"]},
+
+  // === Scaffold / Generate ===
+  {cat:"Scaffold", q:"You need a configuration file with every possible Ansible setting, all commented out as a reference. Which tool produces it?",
+    choices:["ansible-config init --disabled","ansible-config dump --skeleton","ansible-navigator settings --all","ansible-setup --generate-config"], answer:0,
+    typed:"ansible-config init --disabled > ansible.cfg", accept:["ansible-config init"]},
+  {cat:"Scaffold", q:"You want a YAML template showing all possible content navigator options. What produces it?",
+    choices:["ansible-navigator settings --sample","ansible-navigator config --generate","ansible-config init --navigator","ansible-navigator setup --template"], answer:0,
+    typed:"ansible-navigator settings --sample > ansible-navigator.yml", accept:["settings --sample"]},
+  {cat:"Scaffold", q:"You're starting a new content project with modules, roles, and plugins under <code>myns.myutil</code>. What creates the directory skeleton?",
+    choices:["ansible-galaxy collection init myns.myutil","ansible-galaxy create myns.myutil","ansible-creator init collection myns.myutil","ansible-galaxy new myns.myutil"], answer:0,
+    typed:"ansible-galaxy collection init myns.myutil", accept:["collection init"]},
+  {cat:"Scaffold", q:"You need a standard directory structure with tasks/, handlers/, defaults/, templates/ for reusable automation. What creates it?",
+    choices:["ansible-galaxy role init webserver","ansible-galaxy create role webserver","ansible-creator init role webserver","ansible-galaxy new webserver --type role"], answer:0,
+    typed:"ansible-galaxy role init webserver", accept:["role init"]},
+  {cat:"Scaffold", q:"You need to bootstrap a new container image project for running automation, complete with definition files and dependency stubs.",
+    choices:["ansible-creator init execution_env my-ee","ansible-builder init my-ee","ansible-galaxy ee init my-ee","ansible-navigator ee create my-ee"], answer:0,
+    typed:"ansible-creator init execution_env my-ee", accept:["ansible-creator","execution_env"]},
+  {cat:"Scaffold", q:"Something is overriding your expected Ansible behavior. Which command reveals all non-default settings and their origins?",
+    choices:["ansible-config dump --only-changed","ansible-config list --active","ansible-config show --overrides","ansible-config view --diff"], answer:0,
+    typed:"ansible-config dump --only-changed", accept:["ansible-config dump"]},
+  {cat:"Scaffold", q:"Your navigator is behaving unexpectedly. Which command shows its effective runtime settings?",
+    choices:["ansible-navigator settings --effective","ansible-navigator config --active","ansible-navigator dump --runtime","ansible-navigator show-settings"], answer:0,
+    typed:"ansible-navigator settings --effective", accept:["settings --effective"]},
+  {cat:"Scaffold", q:"You want to inspect the generated Dockerfile for your container image build without actually building it. What do you run?",
+    choices:["ansible-builder create","ansible-builder inspect","ansible-builder dockerfile --dry-run","ansible-builder generate"], answer:0,
+    typed:"ansible-builder create", accept:["ansible-builder create"]},
+
+  // === Inventory Variables ===
+  {cat:"Inventory", q:"You need to store 5 different variable files (connection, packages, monitoring, secrets, networking) for a single managed node. What structure allows this?",
+    choices:["A directory named after the host under host_vars/","A single YAML file with sections per concern","Multiple entries in the inventory INI file","A vars_files list in the playbook"], answer:0,
+    typed:"host_vars/<hostname>/ directory with multiple YAML files", accept:["host_vars"]},
+  {cat:"Inventory", q:"Your inventory says <code>webprod1</code> but the actual machine is at <code>192.168.137.50</code>. Which connection variable bridges this gap?",
+    choices:["ansible_host","ansible_ssh_host","ansible_ip_address","ansible_connection_target"], answer:0,
+    typed:"ansible_host", accept:["ansible_host"]},
+  {cat:"Inventory", q:"A managed node runs SSHD on 2222 instead of the default. Which variable do you set?",
+    choices:["ansible_port","ansible_ssh_port","ansible_connection_port","ssh_port"], answer:0,
+    typed:"ansible_port", accept:["ansible_port"]},
+  {cat:"Inventory", q:"You need to authenticate as <code>deployer</code> instead of the default account when connecting. Which variable?",
+    choices:["ansible_user","ansible_remote_user","ansible_login_name","ansible_ssh_account"], answer:0,
+    typed:"ansible_user", accept:["ansible_user"]},
+  {cat:"Inventory", q:"You have group-specific defaults for the <code>webservers</code> group. Where must the YAML files live relative to your inventory?",
+    choices:["In group_vars/webservers/ next to the inventory file","In /etc/ansible/group_vars/webservers/","In the playbook's vars/ directory","In roles/webservers/defaults/"], answer:0,
+    typed:"group_vars/webservers/ next to the inventory file", accept:["group_vars"]},
+  {cat:"Inventory", q:"You suspect a host is missing or has wrong variables. Which command outputs the entire parsed inventory as JSON for debugging?",
+    choices:["ansible-inventory --list","ansible-playbook --list-hosts","ansible --inventory-dump","ansible-navigator inventory --json"], answer:0,
+    typed:"ansible-inventory -i inventory/ --list", accept:["ansible-inventory","--list"]},
+  {cat:"Inventory", q:"You want a visual tree of groups and their members. Which flag gives you that?",
+    choices:["ansible-inventory --graph","ansible-inventory --tree","ansible-inventory --hierarchy","ansible-inventory --visual"], answer:0,
+    typed:"ansible-inventory -i inventory/ --graph", accept:["--graph"]},
+  {cat:"Inventory", q:"You placed <code>conn.yml</code>, <code>app.yml</code>, and <code>secrets.yml</code> inside <code>host_vars/db1/</code>. Are all three loaded?",
+    choices:["Yes — Ansible merges all YAML files in the directory","No — only main.yml is loaded","No — only the first file alphabetically","Yes — but only with .yaml extension"], answer:0,
+    typed:"yes, all YAML files are merged automatically", accept:["yes","merge"]},
+
+  // === Task Execution ===
+  {cat:"Task Execution", q:"Your playbook has tasks tagged <code>config</code>, <code>packages</code>, and <code>firewall</code>. You only want to run the config-related ones.",
+    choices:["--tags config","--only config","--limit-to config","--include config"], answer:0,
+    typed:"ansible-playbook site.yml --tags config", accept:["--tags"]},
+  {cat:"Task Execution", q:"A playbook installs, configures, and deploys. You want to re-run everything EXCEPT the install phase. What flag?",
+    choices:["--skip-tags install","--exclude install","--without install","--omit install"], answer:0,
+    typed:"ansible-playbook site.yml --skip-tags install", accept:["--skip-tags"]},
+  {cat:"Task Execution", q:"A playbook failed at task 'Configure TLS'. After fixing the issue, you want to resume from that exact point.",
+    choices:["--start-at-task 'Configure TLS'","--resume 'Configure TLS'","--continue-from 'Configure TLS'","--retry-at 'Configure TLS'"], answer:0,
+    typed:"ansible-playbook site.yml --start-at-task \"Configure TLS\"", accept:["--start-at-task"]},
+  {cat:"Task Execution", q:"You have a cleanup task that should ONLY execute when someone explicitly asks for it. Which special tag achieves this?",
+    choices:["never","always","manual","on_demand"], answer:0,
+    typed:"never", accept:["never"]},
+  {cat:"Task Execution", q:"You need root for package installation but the play itself shouldn't escalate. At which levels can you selectively enable privilege escalation?",
+    choices:["Play, block, task, and role","Play and task only","Play level only","ansible.cfg only — not in the playbook"], answer:0,
+    typed:"play, block, task, and role level", accept:["block","role"]},
+  {cat:"Task Execution", q:"A task must run as the <code>postgres</code> system account, not root. Which keyword pair achieves this?",
+    choices:["become: true + become_user: postgres","run_as: postgres","privilege_user: postgres","sudo_target: postgres"], answer:0,
+    typed:"become: true and become_user: postgres", accept:["become_user"]},
+  {cat:"Task Execution", q:"Before running a large playbook, you want to see all available tags without executing anything.",
+    choices:["--list-tags","--show-tags","--enumerate-tags","--tag-info"], answer:0,
+    typed:"ansible-playbook site.yml --list-tags", accept:["--list-tags"]},
+
+  // === Filters & Plugins ===
+  {cat:"Filters", q:"You have a variable <code>{alice: {uid: 1001}, bob: {uid: 1002}}</code> and need to iterate over it. Which filter transforms it into a loopable list?",
+    choices:["dict2items","to_list","entries","itemize"], answer:0,
+    typed:"dict2items", accept:["dict2items"]},
+  {cat:"Filters", q:"One returns a comma-separated string, the other always returns a list. Which is which between <code>lookup()</code> and <code>query()</code>?",
+    choices:["lookup → string, query → list","Both return lists","lookup → list, query → string","Both return strings"], answer:0,
+    typed:"lookup returns a comma-separated string, query returns a list", accept:["string","list"]},
+  {cat:"Filters", q:"Given <code>192.168.1.0/24</code>, you need to extract just the base network address. Which <code>ansible.utils</code> filter and argument?",
+    choices:["ipaddr('network')","ipaddr('base')","ipsubnet('address')","netaddr('network_id')"], answer:0,
+    typed:"ansible.utils.ipaddr('network')", accept:["ipaddr"]},
+  {cat:"Filters", q:"A list contains IPs, hostnames, and garbage. You need to keep only valid v4 addresses. Which <code>ansible.utils</code> filter?",
+    choices:["ipv4","is_valid_ip","filter_addresses","validate_ipv4"], answer:0,
+    typed:"mixed_list | ansible.utils.ipv4", accept:["ipv4"]},
+  {cat:"Filters", q:"You need to slurp a local file's contents into a variable at runtime — not copy it, just read the text. Which lookup?",
+    choices:["ansible.builtin.file","ansible.builtin.slurp","ansible.builtin.read_file","ansible.builtin.content"], answer:0,
+    typed:"lookup('ansible.builtin.file', '/path')", accept:["file"]},
+  {cat:"Filters", q:"A playbook needs the value of <code>$HOME</code> from the controller machine. Which lookup?",
+    choices:["ansible.builtin.env","ansible.builtin.shell","ansible.builtin.getenv","ansible.builtin.os_var"], answer:0,
+    typed:"lookup('ansible.builtin.env', 'HOME')", accept:["env"]},
+  {cat:"Filters", q:"You have <code>['dev','stg','prod']</code> and <code>['web','api']</code>. You need all 6 pairs. Which filter?",
+    choices:["product","zip","combine","cross_join"], answer:0,
+    typed:"list1 | product(list2) | list", accept:["product"]},
+  {cat:"Filters", q:"A nested list <code>[['httpd','ssl'],['php']]</code> needs to become <code>['httpd','ssl','php']</code>. Which filter?",
+    choices:["flatten","unnest","merge_lists","collapse"], answer:0,
+    typed:"flatten", accept:["flatten"]},
+  {cat:"Filters", q:"Given <code>10.0.0.0/8</code>, you need the subnet mask in dotted notation. Which filter argument?",
+    choices:["ipaddr('netmask')","ipaddr('mask')","ipsubnet('dotted')","netaddr('subnet_mask')"], answer:0,
+    typed:"ansible.utils.ipaddr('netmask')", accept:["netmask"]},
+  {cat:"Filters", q:"You have users with lists of SSH keys. You need to iterate over each user AND each of their keys (nested). Which filter handles this?",
+    choices:["subelements","nested_loop","cross_items","sub_iterate"], answer:0,
+    typed:"users | subelements('ssh_keys')", accept:["subelements"]},
+  {cat:"Filters", q:"You want to verify a Jinja2 expression works before putting it in a playbook. Fastest way without creating a file?",
+    choices:["ansible localhost -m debug -a 'msg={{ expr }}'","ansible-test eval 'expr'","ansible-playbook --eval 'expr'","ansible-jinja test 'expr'"], answer:0,
+    typed:"ansible localhost -m ansible.builtin.debug -a \"msg={{ expr }}\"", accept:["debug","-a"]},
+  {cat:"Filters", q:"You have <code>['web1','web2']</code> and <code>[8080,8081]</code>. You need <code>[('web1',8080),('web2',8081)]</code> — paired by position.",
+    choices:["zip","product","combine","pair_by_index"], answer:0,
+    typed:"list1 | zip(list2) | list", accept:["zip"]},
+  {cat:"Filters", q:"You need to generate numbers 1 through 10 for a loop, similar to Python's <code>range()</code>. Which lookup?",
+    choices:["ansible.builtin.sequence","ansible.builtin.range","ansible.builtin.counter","ansible.builtin.iterate"], answer:0,
+    typed:"query('ansible.builtin.sequence', 'start=1 end=10')", accept:["sequence"]},
+  {cat:"Filters", q:"You need all <code>.repo</code> files from a directory to loop over. Which lookup uses shell-style wildcards?",
+    choices:["ansible.builtin.fileglob","ansible.builtin.find","ansible.builtin.wildcard","ansible.builtin.glob_files"], answer:0,
+    typed:"query('ansible.builtin.fileglob', '*.repo')", accept:["fileglob"]},
+  {cat:"Filters", q:"From <code>10.0.0.0/24</code>, you need the 5th usable address. Which <code>ansible.utils</code> filter?",
+    choices:["nthhost(5)","ipaddr(5)","host_at(5)","ip_index(5)"], answer:0,
+    typed:"my_cidr | ansible.utils.nthhost(5)", accept:["nthhost"]},
+
+  // === Delegation ===
+  {cat:"Delegation", q:"A task needs to run on the controller, not the remote target. Which keyword redirects execution?",
+    choices:["delegate_to: localhost","connection: local","run_locally: true","target_host: controller"], answer:0,
+    typed:"delegate_to: localhost", accept:["delegate_to"]},
+  {cat:"Delegation", q:"You delegate <code>setup</code> to <code>db1</code> with <code>delegate_facts: true</code>. Whose fact cache gets populated?",
+    choices:["db1's (the machine that was probed)","The current play target's","The controller's","No facts are gathered during delegation"], answer:0,
+    typed:"db1's — the delegated host", accept:["db1","delegated"]},
+  {cat:"Delegation", q:"You delegate <code>setup</code> to <code>db1</code> WITHOUT setting delegate_facts. Whose fact cache gets the data?",
+    choices:["The current play target (inventory_hostname)","db1's","The controller's","Both hosts receive the facts"], answer:0,
+    typed:"the current play target (inventory_hostname)", accept:["play target","inventory_hostname","current"]},
+  {cat:"Delegation", q:"You're delegating a DNS registration to a central server. You only need it to happen once, not for every host in the play.",
+    choices:["run_once: true","serial: 1","throttle: 1","max_hosts: 1"], answer:0,
+    typed:"run_once: true", accept:["run_once"]},
+
+  // === Collections ===
+  {cat:"Collections", q:"Your collection is ready for distribution. Which command packages it into a <code>.tar.gz</code> archive?",
+    choices:["ansible-galaxy collection build","ansible-galaxy collection package","ansible-galaxy collection archive","ansible-galaxy collection export"], answer:0,
+    typed:"ansible-galaxy collection build", accept:["collection build"]},
+  {cat:"Collections", q:"You have a tarball and need to upload it to your private hub. Which subcommand does this?",
+    choices:["ansible-galaxy collection publish","ansible-galaxy collection upload","ansible-galaxy collection push","ansible-galaxy collection deploy"], answer:0,
+    typed:"ansible-galaxy collection publish tarball.tar.gz --server URL", accept:["collection publish"]},
+  {cat:"Collections", q:"A YAML file lists several collections with version constraints. Which flag tells the installer to read from it?",
+    choices:["-r (requirements file)","-f (from file)","--manifest","--deps-file"], answer:0,
+    typed:"ansible-galaxy collection install -r requirements.yml", accept:["-r"]},
+  {cat:"Collections", q:"You want to see every collection available on this system, with versions. What do you run?",
+    choices:["ansible-galaxy collection list","ansible-galaxy collection show","ansible-galaxy collection info --all","ansible-galaxy collection search --local"], answer:0,
+    typed:"ansible-galaxy collection list", accept:["collection list"]},
+  {cat:"Collections", q:"A collection has metadata defining its namespace, version, dependencies, and license. Which file holds this?",
+    choices:["galaxy.yml","meta/main.yml","collection.yml","manifest.json"], answer:0,
+    typed:"galaxy.yml", accept:["galaxy.yml"]},
+  {cat:"Collections", q:"You wrote a custom module for a collection. Under which path must the Python file live?",
+    choices:["plugins/modules/","library/","modules/","src/plugins/"], answer:0,
+    typed:"plugins/modules/", accept:["plugins/modules"]},
+
+  // === Execution Environments ===
+  {cat:"EE", q:"Your <code>execution-environment.yml</code> is ready. Which command compiles it into a container image?",
+    choices:["ansible-builder build --tag myee:1.0","ansible-builder create --tag myee:1.0","ansible-builder compile --tag myee:1.0","ansible-builder make --tag myee:1.0"], answer:0,
+    typed:"ansible-builder build --tag myee:1.0 --container-runtime podman", accept:["ansible-builder build"]},
+  {cat:"EE", q:"Which YAML file is the single source of truth defining what goes into a custom automation runtime image?",
+    choices:["execution-environment.yml","ee-definition.yml","container-spec.yml","runtime.yml"], answer:0,
+    typed:"execution-environment.yml", accept:["execution-environment"]},
+  {cat:"EE", q:"An EE definition references three dependency files — one for Ansible content, one for Python packages, one for OS packages. Name them.",
+    choices:["requirements.yml, requirements.txt, bindep.txt","galaxy.yml, pip.txt, rpm.txt","collections.yml, python-deps.txt, packages.txt","deps/galaxy.yml, deps/python.txt, deps/system.txt"], answer:0,
+    typed:"requirements.yml, requirements.txt, bindep.txt", accept:["bindep"]},
+  {cat:"EE", q:"Your custom image is built locally. Which <code>podman</code> subcommand uploads it to a remote registry?",
+    choices:["podman push","podman upload","podman publish","podman send"], answer:0,
+    typed:"podman push hub.example.com/custom-ee:1.0", accept:["podman push"]},
+  {cat:"EE", q:"You need to verify which Ansible content is baked into a specific runtime image. What navigator subcommand shows this?",
+    choices:["ansible-navigator collections --eei image","ansible-navigator inspect --eei image","ansible-navigator images --list-content","ansible-navigator show --eei image"], answer:0,
+    typed:"ansible-navigator collections --eei image:tag", accept:["collections","--eei"]},
+  {cat:"EE", q:"In Automation Controller, four levels can set which runtime image to use. What's the precedence order, highest first?",
+    choices:["Job Template → Project → Organization → Global","Global → Organization → Project → Job Template","Organization → Project → Job Template → Global","Project → Organization → Job Template → Global"], answer:0,
+    typed:"Job Template > Project > Organization > Global", accept:["job template"]},
+  {cat:"EE", q:"Before pushing to a private registry, you must authenticate. Which <code>podman</code> subcommand?",
+    choices:["podman login","podman auth","podman connect","podman signin"], answer:0,
+    typed:"podman login hub.example.com", accept:["podman login"]},
+  {cat:"EE", q:"Without the navigator, you want to check what's inside a runtime image by spawning it directly. What approach works?",
+    choices:["podman run --rm image ansible-galaxy collection list","podman inspect image --collections","podman exec image --list-content","podman image contents image"], answer:0,
+    typed:"podman run --rm myee:1.0 ansible-galaxy collection list", accept:["podman run"]},
+
+  // === Automation Controller ===
+  {cat:"Controller", q:"You're setting up SSH key-based access to managed Linux nodes in Controller. What credential type?",
+    choices:["Machine","Source Control","Vault","Container Registry"], answer:0,
+    typed:"Machine", accept:["machine"]},
+  {cat:"Controller", q:"A project needs to pull from a private Git repository. What credential type grants this access?",
+    choices:["Source Control","Machine","Galaxy Token","Container Registry"], answer:0,
+    typed:"Source Control", accept:["source control"]},
+  {cat:"Controller", q:"Controller needs to pull a custom runtime image from a private registry. What credential type?",
+    choices:["Container Registry","Machine","Source Control","Galaxy Token"], answer:0,
+    typed:"Container Registry", accept:["container registry"]},
+  {cat:"Controller", q:"An Organization needs to resolve content from a private hub. What credential type provides API access?",
+    choices:["Ansible Galaxy/Automation Hub API Token","Source Control","Machine","Container Registry"], answer:0,
+    typed:"Ansible Galaxy/Automation Hub API Token", accept:["galaxy","api token"]},
+  {cat:"Controller", q:"In a workflow visualizer, you want a notification node to fire whether the previous step succeeded or failed. Which connector type?",
+    choices:["Always","On Success + On Failure (both)","Unconditional","Any Result"], answer:0,
+    typed:"Always", accept:["always"]},
+  {cat:"Controller", q:"You want a specific job to use a custom runtime image. Where in Controller do you configure this?",
+    choices:["On the Job Template itself","In the Organization defaults only","In ansible.cfg within the project","On the Inventory source"], answer:0,
+    typed:"On the Job Template under Execution Environment", accept:["job template"]},
+  {cat:"Controller", q:"A project repo contains <code>collections/requirements.yml</code>. What happens when a job launches?",
+    choices:["Controller automatically installs the listed content","Nothing — you must install manually","The job fails with a dependency error","Only the first collection is installed"], answer:0,
+    typed:"Controller automatically installs those collections", accept:["automatic","install"]},
+  {cat:"Controller", q:"What must be configured at the Organization level so jobs can resolve content from a private hub?",
+    choices:["Galaxy Credentials","Machine Credentials","Source Control Credentials","Container Registry Credentials"], answer:0,
+    typed:"Galaxy Credentials on the Organization", accept:["galaxy"]},
+
+  // === Docs / Survival ===
+  {cat:"Survival", q:"You can't remember if <code>throttle</code> is a play-level or task-level keyword. Which command lists every keyword and where it applies?",
+    choices:["ansible-doc -t keyword -l","ansible-doc --list-keywords","ansible-navigator keywords --all","ansible-config keywords"], answer:0,
+    typed:"ansible-doc -t keyword -l", accept:["-t keyword"]},
+  {cat:"Survival", q:"You need to find a data transformation plugin but can't remember its name. Which command lists all of that plugin type?",
+    choices:["ansible-navigator doc -t filter -l -m stdout","ansible-navigator filters --list-all","ansible-doc --show-filters","ansible-navigator search --type filter"], answer:0,
+    typed:"ansible-navigator doc -t filter -l -m stdout", accept:["-t filter"]},
+  {cat:"Survival", q:"You need the full documentation and examples for <code>ansible.posix.firewalld</code>. What do you run?",
+    choices:["ansible-navigator doc ansible.posix.firewalld -m stdout","ansible-navigator help ansible.posix.firewalld","ansible-navigator man ansible.posix.firewalld","ansible-navigator info ansible.posix.firewalld"], answer:0,
+    typed:"ansible-navigator doc ansible.posix.firewalld -m stdout", accept:["doc","-m stdout"]},
+  {cat:"Survival", q:"You know the short name <code>firewalld</code> but not the full namespace. How do you quickly find it?",
+    choices:["ansible-navigator doc -l -m stdout | grep firewalld","ansible-navigator fqcn firewalld","ansible-galaxy search firewalld","ansible-navigator resolve firewalld"], answer:0,
+    typed:"ansible-navigator doc -l -m stdout | grep firewalld", accept:["grep"]},
+  {cat:"Survival", q:"You need to find all available dynamic source plugins. What command shows them?",
+    choices:["ansible-navigator doc -t inventory -l -m stdout","ansible-navigator inventory --plugins","ansible-doc --dynamic-sources","ansible-navigator sources --list"], answer:0,
+    typed:"ansible-navigator doc -t inventory -l -m stdout", accept:["-t inventory"]},
+  {cat:"Survival", q:"You need to embed a secret directly in a YAML variable file without encrypting the whole file. What subcommand?",
+    choices:["ansible-vault encrypt_string","ansible-vault inline","ansible-vault embed","ansible-vault seal"], answer:0,
+    typed:"ansible-vault encrypt_string 'secret' --name 'var_name'", accept:["encrypt_string"]},
+  {cat:"Survival", q:"Before a big run, you want to catch YAML errors instantly without touching any host. Which flag?",
+    choices:["--syntax-check","--validate","--lint","--parse-only"], answer:0,
+    typed:"ansible-navigator run site.yml --syntax-check -m stdout", accept:["--syntax-check"]},
+  {cat:"Survival", q:"Navigator keeps opening an interactive TUI. Which flag forces plain terminal output?",
+    choices:["-m stdout","--no-tui","--plain","--non-interactive"], answer:0,
+    typed:"-m stdout", accept:["-m stdout","stdout"]},
+  {cat:"Survival", q:"Four locations can hold the main Ansible settings file. Which one wins when multiple exist?",
+    choices:["The ANSIBLE_CONFIG environment variable","./ansible.cfg in the current directory","~/.ansible.cfg in home","The system-wide /etc/ansible/ansible.cfg"], answer:0,
+    typed:"ANSIBLE_CONFIG env > ./ansible.cfg > ~/.ansible.cfg > /etc/ansible/ansible.cfg", accept:["ansible_config","environment"]},
+  {cat:"Survival", q:"You want to see what WOULD change without actually modifying anything, including file diffs. Which two flags?",
+    choices:["--check --diff","--dry-run --verbose","--simulate --show-changes","--noop --delta"], answer:0,
+    typed:"ansible-navigator run site.yml --check --diff -m stdout", accept:["--check","--diff"]},
+  {cat:"Survival", q:"A module you expected isn't found at runtime. What's the most likely cause and what should you check first?",
+    choices:["The collection isn't in the runtime image — check with ansible-navigator collections","ansible-core needs updating","The module was renamed in a recent version","The inventory is misconfigured"], answer:0,
+    typed:"check if the collection is in the EE with ansible-navigator collections", accept:["collection","runtime","image"]},
+];
+
+const ramsay = [
+  "You fucking donkey!",
+  "You fucking donut!",
+  "It's RAW!",
+  "My gran could do better! And she's dead!",
+  "This is a NIGHTMARE!",
+  "Do I need to revive you? Because you're BRAIN DEAD!",
+  "You sandwich! An idiot sandwich!",
+  "PATHETIC!",
+  "I've seen better answers from a POTATO!",
+  "Bloody hell! Even the garnish is embarrassed!",
+  "What are you? An idiot sandwich!",
+  "That answer is so undercooked, a vet could still save it!",
+  "Did you just wake up and decide to be USELESS today?",
+  "For what you just did, you should be in prison!",
+  "You'll kill someone! Get out!",
+  "There's enough grease in that answer to fry a chip shop!",
+  "Congratulations — you've just set a new record for STUPIDITY!",
+  "You panini head!",
+  "Right, I'll get you a coloring book and some crayons.",
+  "Where's the lamb SAUCE?!",
+  "WAKE UP!",
+  "DISGUSTING!",
+  "I wouldn't feed that answer to my dog!",
+  "You absolute muppet!",
+  "If you can't handle the heat, get out of the exam!",
+];
+function roast() { return ramsay[Math.floor(Math.random() * ramsay.length)]; }
+
+function shuffleChoices(q) {
+  const items = q.choices.map((c, i) => ({text: c, isCorrect: i === q.answer}));
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return {shuffled: items.map(x => x.text), correctIdx: items.findIndex(x => x.isCorrect)};
+}
+
+let mode = "mc", activeCats = new Set(), pool = [], idx = 0;
+let correct = 0, wrong = 0, streak = 0, bestStreak = 0, answered = false, flipped = false;
+const allCats = [...new Set(Q.map(q => q.cat))];
+
+function initCats() {
+  const el = document.getElementById("cat-filters");
+  const allBtn = document.createElement("button");
+  allBtn.className = "cat-btn active"; allBtn.textContent = "All";
+  allBtn.onclick = () => { activeCats.clear(); document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active")); allBtn.classList.add("active"); resetGame(); };
+  el.appendChild(allBtn);
+  allCats.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "cat-btn"; btn.textContent = cat;
+    btn.onclick = () => { if(activeCats.has(cat)){activeCats.delete(cat);btn.classList.remove("active")}else{activeCats.add(cat);btn.classList.add("active")} allBtn.classList.toggle("active",activeCats.size===0); resetGame(); };
+    el.appendChild(btn);
+  });
+}
+
+function buildPool() {
+  let f = activeCats.size === 0 ? [...Q] : Q.filter(q => activeCats.has(q.cat));
+  for (let i = f.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [f[i],f[j]]=[f[j],f[i]]; }
+  return f;
+}
+function resetGame() { pool=buildPool(); idx=0; correct=0; wrong=0; streak=0; bestStreak=0; answered=false; flipped=false; updateStats(); render(); }
+function updateStats() {
+  const t=correct+wrong;
+  document.getElementById("s-current").textContent=pool.length>0?`${Math.min(idx+1,pool.length)}/${pool.length}`:`0/0`;
+  document.getElementById("s-correct").textContent=correct;
+  document.getElementById("s-wrong").textContent=wrong;
+  document.getElementById("s-streak").textContent=streak;
+  document.getElementById("s-pct").textContent=t>0?Math.round(correct/t*100)+"%":"0%";
+  document.getElementById("progress").style.width=pool.length>0?(idx/pool.length*100)+"%":"0%";
+}
+function render() {
+  const area=document.getElementById("game-area");
+  if(!pool.length){area.innerHTML='<div class="empty-state"><h2>No questions match</h2><p>Select different categories</p></div>';return;}
+  if(idx>=pool.length){
+    const pct=Math.round(correct/(correct+wrong)*100);
+    const msg=pct>=90?"Outstanding! Exam-ready.":pct>=70?"Good — review the misses.":"Keep going!";
+    area.innerHTML=`<div class="card" style="text-align:center"><h2 style="margin-bottom:16px">Round Complete!</h2><p style="font-size:2.5rem;font-weight:700;color:${pct>=70?'var(--green)':'var(--yellow)'}">${pct}%</p><p style="color:var(--text-dim);margin:8px 0">${correct} correct, ${wrong} wrong, best streak: ${bestStreak}</p><p style="margin:12px 0">${msg}</p><div class="btn-row" style="justify-content:center"><button class="btn btn-primary" onclick="resetGame()">Play Again</button></div></div>`;
+    return;
+  }
+  const q=pool[idx]; updateStats();
+  if(mode==="flash") renderFlash(q,area);
+  else if(mode==="type") renderType(q,area);
+  else renderMC(q,area);
+}
+
+function renderMC(q, area) {
+  const {shuffled, correctIdx} = shuffleChoices(q);
+  const letters=["A","B","C","D"];
+  let html=shuffled.map((c,i)=>`<button class="choice-btn" data-idx="${i}"><span class="choice-letter">${letters[i]}</span>${esc(c)}</button>`).join("");
+  area.innerHTML=`<div class="card"><div class="card-cat">${q.cat}</div><div class="card-q">${q.q}</div><div class="choices">${html}</div><div class="feedback" id="feedback"></div><div class="btn-row"><button class="btn btn-primary" id="next-btn" style="display:none" onclick="nextQ()">Next →</button></div></div>`;
+  area.querySelectorAll(".choice-btn").forEach(btn=>{btn.onclick=()=>answerMC(correctIdx,parseInt(btn.dataset.idx),q)});
+}
+function answerMC(correctIdx, chosen, q) {
+  if(answered)return; answered=true;
+  const btns=document.querySelectorAll(".choice-btn");
+  btns.forEach(b=>b.classList.add("locked"));
+  btns[correctIdx].classList.add("correct");
+  const fb=document.getElementById("feedback");
+  if(chosen===correctIdx){correct++;streak++;if(streak>bestStreak)bestStreak=streak;fb.className="feedback show correct-fb";fb.textContent="Correct!";}
+  else{wrong++;streak=0;btns[chosen].classList.add("wrong");fb.className="feedback show wrong-fb";fb.innerHTML=`<strong>${roast()}</strong><br>The answer is: <strong>${esc(btns[correctIdx].textContent.slice(1))}</strong>`;}
+  document.getElementById("next-btn").style.display="inline-block"; updateStats();
+}
+
+function renderType(q, area) {
+  area.innerHTML=`<div class="card"><div class="card-cat">${q.cat}</div><div class="card-q">${q.q}</div><input class="type-input" id="type-ans" placeholder="Type your answer..." autocomplete="off" spellcheck="false"><div class="type-hint">Include the key command or flag — partial matches accepted</div><div class="feedback" id="feedback"></div><div class="btn-row"><button class="btn btn-secondary" id="show-btn" onclick="showAns()">Show Answer</button><button class="btn btn-submit" id="check-btn" onclick="checkType()">Check</button><button class="btn btn-primary" id="next-btn" style="display:none" onclick="nextQ()">Next →</button></div></div>`;
+  const inp=document.getElementById("type-ans"); inp.focus();
+  inp.onkeydown=e=>{if(e.key==="Enter"){if(answered)nextQ();else checkType();}};
+}
+function checkType() {
+  if(answered)return; answered=true;
+  const inp=document.getElementById("type-ans"), val=inp.value.trim().toLowerCase(), q=pool[idx];
+  const isCorrect=q.accept.some(kw=>val.includes(kw.toLowerCase()));
+  const fb=document.getElementById("feedback");
+  if(isCorrect){correct++;streak++;if(streak>bestStreak)bestStreak=streak;inp.classList.add("correct");fb.className="feedback show correct-fb";fb.innerHTML=`Correct!<div class="code-block">${esc(q.typed)}</div>`;}
+  else{wrong++;streak=0;inp.classList.add("wrong");fb.className="feedback show wrong-fb";fb.innerHTML=`<strong>${roast()}</strong><div class="code-block">${esc(q.typed)}</div>`;}
+  document.getElementById("check-btn").style.display="none";document.getElementById("show-btn").style.display="none";document.getElementById("next-btn").style.display="inline-block";updateStats();
+}
+function showAns() {
+  if(answered)return; answered=true; wrong++; streak=0;
+  const q=pool[idx],fb=document.getElementById("feedback");
+  fb.className="feedback show wrong-fb"; fb.innerHTML=`<strong>${roast()}</strong><div class="code-block">${esc(q.typed)}</div>`;
+  document.getElementById("check-btn").style.display="none";document.getElementById("show-btn").style.display="none";document.getElementById("next-btn").style.display="inline-block";document.getElementById("type-ans").classList.add("wrong");updateStats();
+}
+
+function renderFlash(q, area) {
+  flipped=false;
+  area.innerHTML=`<div class="card flashcard" id="flashcard" onclick="flipCard()"><div class="card-cat">${q.cat}</div><div class="card-q" id="flash-q">${q.q}</div><div id="flash-a" style="display:none" class="flashcard-answer"><div class="code-block">${esc(q.typed)}</div></div><div class="flip-hint" id="flash-hint">Click or press Space to reveal</div><div class="btn-row" id="flash-btns" style="display:none;justify-content:center"><button class="btn btn-secondary" style="border-color:var(--red);color:var(--red)" onclick="event.stopPropagation();flashRate(false)">Didn't Know</button><button class="btn btn-secondary" style="border-color:var(--green);color:var(--green)" onclick="event.stopPropagation();flashRate(true)">Knew It</button></div></div>`;
+}
+function flipCard(){if(flipped)return;flipped=true;document.getElementById("flash-a").style.display="block";document.getElementById("flash-hint").style.display="none";document.getElementById("flash-btns").style.display="flex";}
+function flashRate(knew){if(knew){correct++;streak++;if(streak>bestStreak)bestStreak=streak;}else{wrong++;streak=0;}answered=true;updateStats();nextQ();}
+
+function nextQ(){idx++;answered=false;flipped=false;render();}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+document.querySelectorAll(".mode-btn").forEach(btn=>{btn.onclick=()=>{
+  document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active"); mode=btn.dataset.mode; applyTheme(mode); resetGame();
+}});
+
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"&&mode==="mc"&&!answered){const btns=document.querySelectorAll(".choice-btn");const i=parseInt(e.key)-1;if(btns[i])btns[i].click();}
+  if((e.key===" "||e.key==="Enter")&&!e.target.closest("button")){e.preventDefault();if(mode==="flash"&&!flipped)flipCard();else if(answered)nextQ();}
+  if((e.key==="r"||e.key==="R")&&e.target.tagName!=="INPUT")resetGame();
+});
+
+applyTheme("mc"); initCats(); resetGame();
+</script>
+</body>
+</html>
