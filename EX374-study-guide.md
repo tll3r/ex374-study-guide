@@ -215,42 +215,228 @@ Try to complete each one without looking at the guide above.
 **Remember: the real exam is performance-based — you do the work, not answer questions.**
 
 **Git:**
-- Clone a repo, create a `.gitignore` excluding `*.log`, commit and push
-- Create a feature branch, make changes, merge back to main
+
+1. Clone a repo, create a `.gitignore` excluding `*.log`, commit and push
+
+```bash
+git clone https://git.lab.example.com/automation/project.git && cd project
+echo "*.log" > .gitignore
+git add .gitignore && git commit -m "Ignore log files" && git push origin main
+```
+
+2. Create a feature branch, make changes, merge back to main
+
+```bash
+git checkout -b feature-firewall
+# ... edit files ...
+git add . && git commit -m "Add firewall tasks"
+git checkout main && git merge feature-firewall
+git push origin main
+```
 
 **Inventory:**
-- Set up `host_vars/web1.yml` to override SSH port to 2222
-- Create `group_vars/staging/vars.yml` with `http_port: 8080`
-- Create an inventory where `web1` and `web2` are in group `staging`, `web3` in `production`
+
+3. Set up `host_vars/web1.yml` to override SSH port to 2222
+
+```yaml
+# inventory/host_vars/web1.yml
+---
+ansible_port: 2222
+```
+
+4. Create `group_vars/staging/vars.yml` with `http_port: 8080`
+
+```yaml
+# inventory/group_vars/staging/vars.yml
+---
+http_port: 8080
+```
+
+5. Create an inventory where `web1` and `web2` are in `staging`, `web3` in `production`
+
+```ini
+[staging]
+web1
+web2
+
+[production]
+web3
+```
 
 **Task execution:**
-- Write a playbook that runs OS-specific tasks using `when: ansible_facts['distribution'] == "RedHat"`
-- Tag tasks and run only a subset with `--tags`
+
+6. Write a playbook that runs OS-specific tasks
+
+```yaml
+---
+- name: OS-specific tasks
+  hosts: all
+  become: true
+  tasks:
+    - name: Install RHEL packages
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+      when: ansible_facts['distribution'] == "RedHat"
+```
+
+7. Tag tasks and run only a subset
+
+```yaml
+    - name: Deploy config
+      ansible.builtin.template:
+        src: app.conf.j2
+        dest: /etc/app/app.conf
+      tags: [config]
+```
+
+```bash
+ansible-playbook site.yml --tags config
+```
 
 **Filters and lookups:**
-- Use `lookup('ansible.builtin.file', ...)` to read an SSH key into a variable
-- Use `ansible.utils.ipaddr` to extract the network address from a CIDR
-- Use `dict2items` to loop over a dictionary of users
-- Validate that a list contains only unique elements: `items | unique | length == items | length`
-- Check if a string is alphanumeric with the `isalnum` test
+
+8. Read an SSH key into a variable
+
+```yaml
+vars:
+  pub_key: "{{ lookup('ansible.builtin.file', '/home/admin/.ssh/id_rsa.pub') }}"
+```
+
+9. Extract the network address from a CIDR
+
+```yaml
+msg: "{{ '192.168.1.0/24' | ansible.utils.ipaddr('network') }}"
+# → 192.168.1.0
+```
+
+10. Loop over a dictionary with `dict2items`
+
+```yaml
+vars:
+  users:
+    alice: {uid: 1001}
+    bob: {uid: 1002}
+tasks:
+  - name: Create users
+    ansible.builtin.user:
+      name: "{{ item.key }}"
+      uid: "{{ item.value.uid }}"
+    loop: "{{ users | dict2items }}"
+```
+
+11. Validate unique elements in a list
+
+```yaml
+- name: Ensure no duplicates
+  ansible.builtin.fail:
+    msg: "Duplicate entries found"
+  when: items | length != items | unique | length
+```
+
+12. Check if a string is alphanumeric
+
+```yaml
+- name: Validate input
+  ansible.builtin.fail:
+    msg: "Not alphanumeric"
+  when: not my_string is match('^[a-zA-Z0-9]+$')
+```
 
 **Delegation:**
-- Gather facts from `db1` while running a play against `web1`, store facts on `db1` using `delegate_facts: true`
-- Run a health check on `db1` by delegating a `ping` task from `web1`
+
+13. Gather facts from `db1`, store on `db1` using `delegate_facts`
+
+```yaml
+- name: Get db1 facts
+  ansible.builtin.setup:
+  delegate_to: db1.example.com
+  delegate_facts: true
+  run_once: true
+```
+
+14. Health check on `db1` delegated from `web1`
+
+```yaml
+- name: Ping db1 from web1
+  ansible.builtin.ping:
+  delegate_to: db1.example.com
+```
 
 **Collections:**
-- Initialize a collection with `ansible-galaxy collection init`, add a role, build and publish it
-- Create a `collections/requirements.yml` and install from Automation Hub
+
+15. Initialize, build, and publish a collection
+
+```bash
+ansible-galaxy collection init myns.myutil
+# add roles, plugins...
+cd myns/myutil
+ansible-galaxy collection build
+ansible-galaxy collection publish myns-myutil-1.0.0.tar.gz \
+  --server https://hub.example.com/api/galaxy/content/staging/
+```
+
+16. Install from a requirements file
+
+```yaml
+# collections/requirements.yml
+---
+collections:
+  - name: ansible.utils
+  - name: community.general
+```
+
+```bash
+ansible-galaxy collection install -r collections/requirements.yml
+```
 
 **Execution environments:**
-- Write an `execution-environment.yml`, build with `ansible-builder`, push to Hub
-- Verify collections in the EE: `podman run --rm <ee> ansible-galaxy collection list`
+
+17. Write an EE definition, build, and push
+
+```yaml
+# execution-environment.yml
+---
+version: 3
+images:
+  base_image:
+    name: registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9:latest
+dependencies:
+  galaxy: requirements.yml
+  python: requirements.txt
+  system: bindep.txt
+```
+
+```bash
+ansible-builder build --tag hub.example.com/custom-ee:1.0 --container-runtime podman
+podman login hub.example.com
+podman push hub.example.com/custom-ee:1.0
+```
+
+18. Verify collections in the EE
+
+```bash
+podman run --rm hub.example.com/custom-ee:1.0 ansible-galaxy collection list
+# or
+ansible-navigator collections --eei hub.example.com/custom-ee:1.0
+```
 
 **Automation Controller:**
-- Create a project pulling from a private Git repo using an SSH SCM credential
-- Create a machine credential with an SSH key
-- Create a job template using a specific EE pulled from Automation Hub
-- Pull an EE from a private registry (set up Container Registry credential)
+
+19. Create a project from a private Git repo
+    - Credentials → Add → Type: **Source Control** → paste SSH private key
+    - Projects → Add → SCM Type: Git → URL: `git@git.example.com:org/repo.git` → Credential: the above
+
+20. Create a machine credential
+    - Credentials → Add → Type: **Machine** → Username: `ansible` → SSH Private Key: paste key → Privilege Escalation: sudo
+
+21. Create a job template with a custom EE
+    - Administration → Execution Environments → Add → Image: `hub.example.com/custom-ee:1.0` → Credential: Container Registry cred
+    - Templates → Add Job Template → Project, Inventory, Playbook, Credential → Execution Environment: select the above
+
+22. Pull an EE from a private registry
+    - Credentials → Add → Type: **Container Registry** → URL: `hub.example.com` → Username/Password
+    - Administration → Execution Environments → Add → Image: `hub.example.com/custom-ee:1.0` → Credential: the above
 
 ---
 
@@ -297,11 +483,35 @@ git diff
 git add -u
 git commit -m "Update hello playbook with gather_facts"
 git push origin main
+
+# Work on a feature branch
+git checkout -b feature-firewall
+cat > playbooks/firewall.yml <<'EOF'
+---
+- name: Configure firewall
+  hosts: webservers
+  become: true
+  tasks:
+    - name: Open HTTPS
+      ansible.posix.firewalld:
+        service: https
+        permanent: true
+        immediate: true
+        state: enabled
+EOF
+git add playbooks/firewall.yml
+git commit -m "Add firewall playbook"
+git push origin feature-firewall
+
+# Merge back to main
+git checkout main
+git merge feature-firewall
+git push origin main
 ```
 
 **Key points for the exam:**
 - Know `git add`, `git commit -m`, `git push`, `git pull`, `git diff`, `git status`
-- Know how to create branches: `git checkout -b feature-x`
+- Know how to create and merge branches: `git checkout -b feature-x`, `git merge feature-x`
 - Know `.gitignore` to exclude vault passwords, `.env`, etc.
 
 ---
