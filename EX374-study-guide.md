@@ -808,6 +808,27 @@ ansible-playbook site.yml --start-at-task "Deploy configuration"
 ansible-playbook site.yml --step
 ```
 
+**Rolling updates (bonus — covered in AU374, not explicitly in exam objectives but good to know):**
+
+```yaml
+---
+- name: Rolling update webservers
+  hosts: webservers
+  serial: 2                    # update 2 hosts at a time
+  max_fail_percentage: 25      # abort if >25% of hosts fail
+  order: sorted                # predictable host order
+
+  tasks:
+    - name: Update application
+      ansible.builtin.dnf:
+        name: myapp
+        state: latest
+      become: true
+```
+
+Key keywords: `serial` (batch size), `max_fail_percentage` (failure threshold),
+`order` (`sorted`, `reverse_sorted`, `shuffle`, `reverse_inventory`, `inventory`).
+
 ---
 
 ## 4. Transform Data with Filters and Plugins

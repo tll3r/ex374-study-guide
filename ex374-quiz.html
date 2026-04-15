@@ -277,6 +277,9 @@ const Q = [
   {cat:"Task Execution", q:"Before running a large playbook, you want to see all available tags without executing anything.",
     choices:["--list-tags","--show-tags","--enumerate-tags","--tag-info"], answer:0,
     typed:"ansible-playbook site.yml --list-tags", accept:["--list-tags"]},
+  {cat:"Task Execution", q:"You're patching 20 webservers and want to update 2 at a time, aborting the play if more than 25% fail. Which two play-level keywords achieve this?",
+    choices:["serial + max_fail_percentage","batch + fail_limit","throttle + max_failures","limit + abort_percentage"], answer:0,
+    typed:"serial: 2 and max_fail_percentage: 25", accept:["serial","max_fail_percentage"]},
 
   // === Filters & Plugins ===
   {cat:"Filters", q:"You have a variable <code>{alice: {uid: 1001}, bob: {uid: 1002}}</code> and need to iterate over it. Which filter transforms it into a loopable list?",
