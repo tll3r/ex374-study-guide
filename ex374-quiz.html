@@ -228,6 +228,12 @@ const Q = [
   {cat:"Scaffold", q:"You want to inspect the generated Dockerfile for your container image build without actually building it. What do you run?",
     choices:["ansible-builder create","ansible-builder inspect","ansible-builder dockerfile --dry-run","ansible-builder generate"], answer:0,
     typed:"ansible-builder create", accept:["ansible-builder create"]},
+  {cat:"Scaffold", q:"You want automation content navigator to only pull the EE image when it's not already present locally. Which <code>ansible-navigator.yml</code> setting?",
+    choices:["execution-environment.pull.policy: missing","execution-environment.pull: if-not-present","image.pull-policy: never","container.pull: on-missing"], answer:0,
+    typed:"execution-environment.pull.policy: missing", accept:["missing","pull"]},
+  {cat:"Scaffold", q:"Navigator generates JSON artifact files after every playbook run, cluttering your project. Which setting disables this?",
+    choices:["playbook-artifact.enable: false","artifacts.generate: false","logging.artifact: disabled","output.save-artifacts: false"], answer:0,
+    typed:"playbook-artifact.enable: false", accept:["playbook-artifact","enable"]},
 
   // === Inventory Variables ===
   {cat:"Inventory", q:"You need to store 5 different variable files (connection, packages, monitoring, secrets, networking) for a single managed node. What structure allows this?",
@@ -280,6 +286,21 @@ const Q = [
   {cat:"Task Execution", q:"You're patching 20 webservers and want to update 2 at a time, aborting the play if more than 25% fail. Which two play-level keywords achieve this?",
     choices:["serial + max_fail_percentage","batch + fail_limit","throttle + max_failures","limit + abort_percentage"], answer:0,
     typed:"serial: 2 and max_fail_percentage: 25", accept:["serial","max_fail_percentage"]},
+  {cat:"Task Execution", q:"You need tasks to run BEFORE any roles in a play, and other tasks to run AFTER all handlers have fired. Which two play sections?",
+    choices:["pre_tasks and post_tasks","before_roles and after_roles","setup_tasks and cleanup_tasks","init_tasks and final_tasks"], answer:0,
+    typed:"pre_tasks and post_tasks", accept:["pre_tasks","post_tasks"]},
+  {cat:"Task Execution", q:"Your playbook runs slowly and you want to see exactly how long each task takes. Which two callback plugins help profile execution time?",
+    choices:["timer and profile_tasks","stopwatch and task_profiler","timing and task_timer","benchmark and profile"], answer:0,
+    typed:"timer and profile_tasks in ansible.cfg callback_enabled", accept:["profile_tasks"]},
+  {cat:"Task Execution", q:"A <code>dnf</code> task installs three packages using <code>loop</code>. Each iteration opens a new transaction. How do you make it faster?",
+    choices:["Pass all packages as a list to the name parameter — no loop","Use async with poll: 0","Use strategy: free on the play","Add throttle: 3 to the task"], answer:0,
+    typed:"name: [pkg1, pkg2, pkg3] — one transaction instead of three", accept:["list","name"]},
+  {cat:"Task Execution", q:"You want a canary deployment: first batch is 5% of hosts, second 35%, then the rest. How do you configure <code>serial</code>?",
+    choices:["serial: [\"5%\", \"35%\", \"100%\"]","serial: 5 35 100","batch_size: [5%, 35%, 100%]","serial: {first: 5%, second: 35%, final: 100%}"], answer:0,
+    typed:"serial: [\"5%\", \"35%\", \"100%\"]", accept:["5%","serial"]},
+  {cat:"Task Execution", q:"During a rolling update with <code>serial</code>, you want the entire play to stop if even one host in a batch fails. Which keyword and value?",
+    choices:["max_fail_percentage: 0","max_fail_percentage: 1","fail_fast: true","abort_percentage: 0"], answer:0,
+    typed:"max_fail_percentage: 0", accept:["max_fail_percentage"]},
 
   // === Filters & Plugins ===
   {cat:"Filters", q:"You have a variable <code>{alice: {uid: 1001}, bob: {uid: 1002}}</code> and need to iterate over it. Which filter transforms it into a loopable list?",
@@ -327,6 +348,21 @@ const Q = [
   {cat:"Filters", q:"From <code>10.0.0.0/24</code>, you need the 5th usable address. Which <code>ansible.utils</code> filter?",
     choices:["nthhost(5)","ipaddr(5)","host_at(5)","ip_index(5)"], answer:0,
     typed:"my_cidr | ansible.utils.nthhost(5)", accept:["nthhost"]},
+  {cat:"Filters", q:"A firewall role receives items that may or may not have a <code>state</code> key. You want <code>enabled</code> as the fallback if unset. Which filter?",
+    choices:["default('enabled')","fallback('enabled')","if_undefined('enabled')","else('enabled')"], answer:0,
+    typed:"item['state'] | default('enabled')", accept:["default"]},
+  {cat:"Filters", q:"A task option should be completely absent from the module call when the variable is not defined. Which special value do you pass with <code>default()</code>?",
+    choices:["omit","none","undefined","skip"], answer:0,
+    typed:"item['zone'] | default(omit)", accept:["omit"]},
+  {cat:"Filters", q:"You need to ensure a protocol value is always lowercase, defaulting to <code>tcp</code> when unset. Which filter chain?",
+    choices:["default('tcp') | lower","lower | default('tcp')","to_lower(default='tcp')","lowercase(fallback='tcp')"], answer:0,
+    typed:"item['protocol'] | default('tcp') | lower", accept:["lower"]},
+  {cat:"Filters", q:"Inside a template, you need the default IPv4 address of a host stored in the variable <code>server</code>. Which expression accesses another host's gathered facts?",
+    choices:["hostvars[server]['ansible_facts']['default_ipv4']['address']","ansible_facts[server]['ipv4']['address']","facts[server].default_ipv4.address","host_facts[server]['network']['ipv4']"], answer:0,
+    typed:"hostvars[server]['ansible_facts']['default_ipv4']['address']", accept:["hostvars"]},
+  {cat:"Filters", q:"You need to dynamically generate a variable from a Jinja2 template file and have Ansible treat the result as YAML. Which lookup and filter combination?",
+    choices:["lookup('ansible.builtin.template', 'file.j2') | from_yaml","lookup('ansible.builtin.file', 'file.j2') | to_yaml","lookup('ansible.builtin.template', 'file.j2') | parse","query('ansible.builtin.render', 'file.j2') | from_yaml"], answer:0,
+    typed:"lookup('ansible.builtin.template', 'rules.yml.j2') | from_yaml", accept:["template","from_yaml"]},
 
   // === Delegation ===
   {cat:"Delegation", q:"A task needs to run on the controller, not the remote target. Which keyword redirects execution?",
@@ -341,6 +377,9 @@ const Q = [
   {cat:"Delegation", q:"You're delegating a DNS registration to a central server. You only need it to happen once, not for every host in the play.",
     choices:["run_once: true","serial: 1","throttle: 1","max_hosts: 1"], answer:0,
     typed:"run_once: true", accept:["run_once"]},
+  {cat:"Delegation", q:"During a rolling update, you need to disable each web server on the HAProxy load balancer before patching it. The LB is the first host in the <code>lb_servers</code> group. Which keyword sends this task there?",
+    choices:["delegate_to: \"{{ groups['lb_servers'][0] }}\"","run_on: lb_servers[0]","target_host: haproxy","execute_at: load_balancer"], answer:0,
+    typed:"delegate_to: \"{{ groups['lb_servers'][0] }}\"", accept:["delegate_to","groups"]},
 
   // === Collections ===
   {cat:"Collections", q:"Your collection is ready for distribution. Which command packages it into a <code>.tar.gz</code> archive?",
@@ -361,6 +400,15 @@ const Q = [
   {cat:"Collections", q:"You wrote a custom module for a collection. Under which path must the Python file live?",
     choices:["plugins/modules/","library/","modules/","src/plugins/"], answer:0,
     typed:"plugins/modules/", accept:["plugins/modules"]},
+  {cat:"Collections", q:"Your collection depends on <code>ansible.posix >= 1.0.0</code>. Where in the collection do you declare this so consumers install it automatically?",
+    choices:["galaxy.yml under the dependencies key","meta/runtime.yml","requirements.yml at the collection root","meta/main.yml"], answer:0,
+    typed:"galaxy.yml: dependencies: {'ansible.posix': '>=1.0.0'}", accept:["galaxy.yml","dependencies"]},
+  {cat:"Collections", q:"You built a collection locally and need to publish it to private automation hub. What three steps complete the workflow?",
+    choices:["Create namespace, upload tarball, approve the collection","Push tarball, sync repository, enable namespace","Upload tarball, sign it, sync to certified","Tag release, push to hub, verify checksum"], answer:0,
+    typed:"create namespace, upload tarball, approve collection", accept:["namespace","approve"]},
+  {cat:"Collections", q:"You want to add an existing role to your collection. Where must the role directory be placed?",
+    choices:["roles/ inside the collection directory","playbooks/roles/","plugins/roles/","content/roles/"], answer:0,
+    typed:"roles/ directory inside the collection", accept:["roles/"]},
 
   // === Execution Environments ===
   {cat:"EE", q:"Your <code>execution-environment.yml</code> is ready. Which command compiles it into a container image?",
@@ -387,6 +435,15 @@ const Q = [
   {cat:"EE", q:"Without the navigator, you want to check what's inside a runtime image by spawning it directly. What approach works?",
     choices:["podman run --rm image ansible-galaxy collection list","podman inspect image --collections","podman exec image --list-content","podman image contents image"], answer:0,
     typed:"podman run --rm myee:1.0 ansible-galaxy collection list", accept:["podman run"]},
+  {cat:"EE", q:"You need to copy custom files like repo configs and CA certificates into the EE build context. Which key in <code>execution-environment.yml</code> handles this?",
+    choices:["additional_build_files","build_context","copy_files","extra_files"], answer:0,
+    typed:"additional_build_files", accept:["additional_build_files"]},
+  {cat:"EE", q:"During an EE build you need to run custom Dockerfile instructions like <code>RUN update-ca-trust</code> or set environment variables. Which key in <code>execution-environment.yml</code>?",
+    choices:["additional_build_steps","custom_commands","dockerfile_commands","build_commands"], answer:0,
+    typed:"additional_build_steps with prepend_base or append_base", accept:["additional_build_steps"]},
+  {cat:"EE", q:"In <code>additional_build_steps</code>, you want commands to run BEFORE the standard dependency installation. Which sub-key?",
+    choices:["prepend_base","before_install","pre_build","early_steps"], answer:0,
+    typed:"prepend_base", accept:["prepend_base"]},
 
   // === Automation Controller ===
   {cat:"Controller", q:"You're setting up SSH key-based access to managed Linux nodes in Controller. What credential type?",
@@ -413,6 +470,9 @@ const Q = [
   {cat:"Controller", q:"What must be configured at the Organization level so jobs can resolve content from a private hub?",
     choices:["Galaxy Credentials","Machine Credentials","Source Control Credentials","Container Registry Credentials"], answer:0,
     typed:"Galaxy Credentials on the Organization", accept:["galaxy"]},
+  {cat:"Controller", q:"A job template needs to run a playbook from the <code>review3</code> branch instead of the project's default branch. What must be enabled on the Project, and where is the branch set?",
+    choices:["Enable 'Allow branch override' on the Project, set the branch on the Job Template","Set the branch directly on the Project source control URL","Create a separate Project per branch","Configure the branch in the Inventory source"], answer:0,
+    typed:"Allow branch override on Project, Source control branch on Job Template", accept:["branch override","allow branch"]},
 
   // === Docs / Survival ===
   {cat:"Survival", q:"You can't remember if <code>throttle</code> is a play-level or task-level keyword. Which command lists every keyword and where it applies?",
