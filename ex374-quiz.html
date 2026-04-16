@@ -594,70 +594,48 @@ function updateStats() {
   document.getElementById("s-pct").textContent=t>0?Math.round(correct/t*100)+"%":"0%";
   document.getElementById("progress").style.width=pool.length>0?(idx/pool.length*100)+"%":"0%";
 }
-function render() {
-  const area=document.getElementById("game-area");
-  if(!pool.length){area.innerHTML='<div class="empty-state"><h2>No questions match</h2><p>Select different categories</p></div>';return;}
-  if(idx>=pool.length){
-    const pct=Math.round(correct/(correct+wrong)*100);
-    const msg=pct>=90?"Outstanding! Exam-ready.":pct>=70?"Good — review the misses.":"Keep going!";
-    area.innerHTML=`<div class="card" style="text-align:center"><h2 style="margin-bottom:16px">Round Complete!</h2><p style="font-size:2.5rem;font-weight:700;color:${pct>=70?'var(--green)':'var(--yellow)'}">${pct}%</p><p style="color:var(--text-dim);margin:8px 0">${correct} correct, ${wrong} wrong, best streak: ${bestStreak}</p><p style="margin:12px 0">${msg}</p><div class="btn-row" style="justify-content:center"><button class="btn btn-primary" onclick="resetGame()">Play Again</button></div></div>`;
-    return;
-  }
-  const q=pool[idx]; updateStats();
-  if(mode==="listen") renderListen(q,area);
-  else if(mode==="flash") renderFlash(q,area);
-  else if(mode==="type") renderType(q,area);
-  else renderMC(q,area);
-}
-
-function renderMC(q, area) {
-  const {shuffled, correctIdx} = shuffleChoices(q);
-  const letters=["A","B","C","D"];
-  let html=shuffled.map((c,i)=>`<button class="choice-btn" data-idx="${i}"><span class="choice-letter">${letters[i]}</span>${esc(c)}</button>`).join("");
-  area.innerHTML=`<div class="card"><div class="card-cat">${q.cat}</div><div class="card-q">${q.q}</div><div class="choices">${html}</div><div class="feedback" id="feedback"></div><div class="btn-row"><button class="btn btn-primary" id="next-btn" style="display:none" onclick="nextQ()">Next →</button></div></div>`;
-  area.querySelectorAll(".choice-btn").forEach(btn=>{btn.onclick=()=>answerMC(correctIdx,parseInt(btn.dataset.idx),q)});
-}
-function answerMC(correctIdx, chosen, q) {
-  if(answered)return; answered=true;
-  const btns=document.querySelectorAll(".choice-btn");
-  btns.forEach(b=>b.classList.add("locked"));
-  btns[correctIdx].classList.add("correct");
-  const fb=document.getElementById("feedback");
-  if(chosen===correctIdx){correct++;streak++;if(streak>bestStreak)bestStreak=streak;fb.className="feedback show correct-fb";fb.textContent="Correct!";}
-  else{wrong++;streak=0;btns[chosen].classList.add("wrong");fb.className="feedback show wrong-fb";fb.innerHTML=`<strong>${roast()}</strong><br>The answer is: <strong>${esc(btns[correctIdx].textContent.slice(1))}</strong>`;}
-  document.getElementById("next-btn").style.display="inline-block"; updateStats();
-}
-
-function renderType(q, area) {
-  area.innerHTML=`<div class="card"><div class="card-cat">${q.cat}</div><div class="card-q">${q.q}</div><input class="type-input" id="type-ans" placeholder="Type your answer..." autocomplete="off" spellcheck="false"><div class="type-hint">Include the key command or flag — partial matches accepted</div><div class="feedback" id="feedback"></div><div class="btn-row"><button class="btn btn-secondary" id="show-btn" onclick="showAns()">Show Answer</button><button class="btn btn-submit" id="check-btn" onclick="checkType()">Check</button><button class="btn btn-primary" id="next-btn" style="display:none" onclick="nextQ()">Next →</button></div></div>`;
-  const inp=document.getElementById("type-ans"); inp.focus();
-  inp.onkeydown=e=>{if(e.key==="Enter"){if(answered)nextQ();else checkType();}};
-}
-function checkType() {
-  if(answered)return; answered=true;
-  const inp=document.getElementById("type-ans"), val=inp.value.trim().toLowerCase(), q=pool[idx];
-  const isCorrect=q.accept.some(kw=>val.includes(kw.toLowerCase()));
-  const fb=document.getElementById("feedback");
-  if(isCorrect){correct++;streak++;if(streak>bestStreak)bestStreak=streak;inp.classList.add("correct");fb.className="feedback show correct-fb";fb.innerHTML=`Correct!<div class="code-block">${esc(q.typed)}</div>`;}
-  else{wrong++;streak=0;inp.classList.add("wrong");fb.className="feedback show wrong-fb";fb.innerHTML=`<strong>${roast()}</strong><div class="code-block">${esc(q.typed)}</div>`;}
-  document.getElementById("check-btn").style.display="none";document.getElementById("show-btn").style.display="none";document.getElementById("next-btn").style.display="inline-block";updateStats();
-}
-function showAns() {
-  if(answered)return; answered=true; wrong++; streak=0;
-  const q=pool[idx],fb=document.getElementById("feedback");
-  fb.className="feedback show wrong-fb"; fb.innerHTML=`<strong>${roast()}</strong><div class="code-block">${esc(q.typed)}</div>`;
-  document.getElementById("check-btn").style.display="none";document.getElementById("show-btn").style.display="none";document.getElementById("next-btn").style.display="inline-block";document.getElementById("type-ans").classList.add("wrong");updateStats();
-}
-
-function renderFlash(q, area) {
-  flipped=false;
-  area.innerHTML=`<div class="card flashcard" id="flashcard" onclick="flipCard()"><div class="card-cat">${q.cat}</div><div class="card-q" id="flash-q">${q.q}</div><div id="flash-a" style="display:none" class="flashcard-answer"><div class="code-block">${esc(q.typed)}</div></div><div class="flip-hint" id="flash-hint">Click or press Space to reveal</div><div class="btn-row" id="flash-btns" style="display:none;justify-content:center"><button class="btn btn-secondary" style="border-color:var(--red);color:var(--red)" onclick="event.stopPropagation();flashRate(false)">Didn't Know</button><button class="btn btn-secondary" style="border-color:var(--green);color:var(--green)" onclick="event.stopPropagation();flashRate(true)">Knew It</button></div></div>`;
-}
-function flipCard(){if(flipped)return;flipped=true;document.getElementById("flash-a").style.display="block";document.getElementById("flash-hint").style.display="none";document.getElementById("flash-btns").style.display="flex";}
-function flashRate(knew){if(knew){correct++;streak++;if(streak>bestStreak)bestStreak=streak;}else{wrong++;streak=0;}answered=true;updateStats();nextQ();}
-
-// --- TTS helper ---
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function stripHtml(s){ const d=document.createElement("div"); d.innerHTML=s; return d.textContent||""; }
+
+// --- Shared card shell ---
+function buildCard(q, innerHtml, extraBtns="") {
+  return `<div class="card"><div class="card-cat">${q.cat}</div><div class="card-q">${q.q}</div>${innerHtml}<div class="feedback" id="feedback"></div><div class="btn-row">${extraBtns}<button class="btn btn-primary" id="next-btn" style="display:none" onclick="nextQ()">Next &rarr;</button></div></div>`;
+}
+
+// --- Single scoring function ---
+function scoreAnswer(isCorrect, correctText, opts={}) {
+  if(answered) return; answered=true;
+  if(isCorrect){ correct++;streak++;if(streak>bestStreak)bestStreak=streak; }
+  else{ wrong++;streak=0; }
+
+  const fb=document.getElementById("feedback");
+  if(isCorrect){ fb.className="feedback show correct-fb"; fb.textContent="Correct!"; }
+  else{ fb.className="feedback show wrong-fb"; fb.innerHTML=`<strong>${roast()}</strong><br>The answer is: <strong>${correctText}</strong>`; }
+
+  if(opts.highlightCorrect!==undefined){
+    const btns=document.querySelectorAll(".choice-btn");
+    btns.forEach(b=>b.classList.add("locked"));
+    btns[opts.highlightCorrect].classList.add("correct");
+    if(!isCorrect && opts.highlightChosen>=0) btns[opts.highlightChosen].classList.add("wrong");
+  }
+  if(opts.inputId){
+    const inp=document.getElementById(opts.inputId);
+    if(inp) inp.classList.add(isCorrect?"correct":"wrong");
+  }
+  if(opts.hideIds) opts.hideIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display="none"; });
+
+  document.getElementById("next-btn").style.display="inline-block";
+  updateStats();
+
+  if(opts.speak){
+    const sayText=isCorrect?"Correct!":"Wrong. The answer is "+stripHtml(correctText);
+    speak(sayText).then(()=>{
+      if(mode==="listen"&&answered) setTimeout(()=>{ if(mode==="listen") nextQ(); },800);
+    });
+  }
+}
+
+// --- TTS / STT helpers ---
 function speak(text){
   return new Promise(resolve=>{
     speechSynthesis.cancel();
@@ -666,8 +644,6 @@ function speak(text){
     speechSynthesis.speak(u);
   });
 }
-
-// --- STT helper ---
 const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;
 function listenVoice(choices){
   return new Promise((resolve)=>{
@@ -684,13 +660,9 @@ function listenVoice(choices){
       const st=document.getElementById("listen-status");
       if(st) st.textContent=`Heard: "${raw}"`;
       if(letters[raw]!==undefined){ fin(letters[raw]); return; }
-      const choicesLower=choices.map(c=>stripHtml(c).toLowerCase());
-      for(let i=0;i<choicesLower.length;i++){
-        if(raw.includes(choicesLower[i])||choicesLower[i].includes(raw)){ fin(i); return; }
-      }
-      for(const [k,v] of Object.entries(letters)){
-        if(raw.startsWith(k)){ fin(v); return; }
-      }
+      const lc=choices.map(c=>stripHtml(c).toLowerCase());
+      for(let i=0;i<lc.length;i++){ if(raw.includes(lc[i])||lc[i].includes(raw)){ fin(i); return; } }
+      for(const [k,v] of Object.entries(letters)){ if(raw.startsWith(k)){ fin(v); return; } }
       fin(-1);
     };
     rec.onerror=()=>fin(-1);
@@ -704,88 +676,156 @@ function stopListenCleanup(){
   listenVoice._rec=null;
 }
 
-// --- Listen mode renderer ---
-async function renderListen(q, area){
-  if(mode!=="listen") return;
-  const {shuffled, correctIdx}=shuffleChoices(q);
+// --- Choice button builder (shared by MC and Listen) ---
+function buildChoiceButtons(shuffled){
   const letters=["A","B","C","D"];
-  let html=shuffled.map((c,i)=>`<button class="choice-btn" data-idx="${i}"><span class="choice-letter">${letters[i]}</span>${esc(c)}</button>`).join("");
-  area.innerHTML=`<div class="card"><div class="card-cat">${q.cat}</div><div class="card-q">${q.q}</div><div class="choices">${html}</div><div class="mic-wrap"><div class="mic-dot idle" id="mic-dot"></div><span class="mic-label" id="mic-label">Reading question…</span></div><div class="listen-status" id="listen-status"></div><div class="feedback" id="feedback"></div><div class="btn-row"><button class="btn btn-primary" id="next-btn" style="display:none" onclick="nextQ()">Next →</button></div></div>`;
-
-  const qText=stripHtml(q.q);
-  const choiceText=shuffled.map((c,i)=>`${letters[i]}. ${stripHtml(c)}`).join(". ");
-  await speak(qText+". "+choiceText);
-  if(mode!=="listen") return;
-
-  const dot=document.getElementById("mic-dot");
-  const lbl=document.getElementById("mic-label");
-  if(dot) dot.classList.remove("idle");
-  if(lbl) lbl.textContent="Listening… say A, B, C, or D";
-
-  const picked=await listenVoice(shuffled);
-  if(mode!=="listen") return;
-  if(dot) dot.classList.add("idle");
-  if(lbl) lbl.textContent="Processing…";
-
-  if(picked>=0&&picked<shuffled.length){
-    const btns=document.querySelectorAll(".choice-btn");
-    btns[picked].classList.add("voice-pick");
-    await new Promise(r=>setTimeout(r,400));
-    if(mode!=="listen") return;
-    answerListen(correctIdx,picked,q,shuffled);
-  } else {
-    if(lbl) lbl.textContent="Didn't catch that — tap a choice or wait…";
-    area.querySelectorAll(".choice-btn").forEach(btn=>{
-      btn.onclick=()=>answerListen(correctIdx,parseInt(btn.dataset.idx),q,shuffled);
-    });
-    await new Promise(r=>setTimeout(r,60000));
-    if(mode!=="listen"||answered) return;
-    answerListen(correctIdx,-1,q,shuffled);
-  }
+  return shuffled.map((c,i)=>`<button class="choice-btn" data-idx="${i}"><span class="choice-letter">${letters[i]}</span>${esc(c)}</button>`).join("");
 }
-
-function answerListen(correctIdx,chosen,q,shuffled){
-  if(answered) return; answered=true;
-  const btns=document.querySelectorAll(".choice-btn");
-  btns.forEach(b=>b.classList.add("locked"));
-  btns[correctIdx].classList.add("correct");
-  const fb=document.getElementById("feedback");
-  const lbl=document.getElementById("mic-label");
-  let sayText;
-  if(chosen===correctIdx){
-    correct++;streak++;if(streak>bestStreak)bestStreak=streak;
-    fb.className="feedback show correct-fb"; fb.textContent="Correct!";
-    sayText="Correct!";
-  } else {
-    wrong++;streak=0;
-    if(chosen>=0) btns[chosen].classList.add("wrong");
-    const ans=stripHtml(shuffled[correctIdx]);
-    fb.className="feedback show wrong-fb";
-    fb.innerHTML=`<strong>${roast()}</strong><br>The answer is: <strong>${esc(shuffled[correctIdx])}</strong>`;
-    sayText="Wrong. The answer is "+ans;
-  }
-  if(lbl) lbl.textContent="";
-  document.getElementById("next-btn").style.display="inline-block";
-  updateStats();
-  speak(sayText).then(()=>{
-    if(mode==="listen"&&answered){
-      setTimeout(()=>{ if(mode==="listen") nextQ(); },800);
-    }
+function wireChoiceButtons(area, correctIdx, correctText, opts={}){
+  area.querySelectorAll(".choice-btn").forEach(btn=>{
+    btn.onclick=()=>scoreAnswer(parseInt(btn.dataset.idx)===correctIdx, correctText,
+      {highlightCorrect:correctIdx, highlightChosen:parseInt(btn.dataset.idx), ...opts});
   });
 }
 
-function nextQ(){idx++;answered=false;flipped=false;if(mode==="listen")stopListenCleanup();render();}
-function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+// --- render() dispatcher ---
+function render() {
+  const area=document.getElementById("game-area");
+  if(!pool.length){area.innerHTML='<div class="empty-state"><h2>No questions match</h2><p>Select different categories</p></div>';return;}
+  if(idx>=pool.length){
+    const pct=Math.round(correct/(correct+wrong)*100);
+    const msg=pct>=90?"Outstanding! Exam-ready.":pct>=70?"Good &mdash; review the misses.":"Keep going!";
+    area.innerHTML=`<div class="card" style="text-align:center"><h2 style="margin-bottom:16px">Round Complete!</h2><p style="font-size:2.5rem;font-weight:700;color:${pct>=70?'var(--green)':'var(--yellow)'}">${pct}%</p><p style="color:var(--text-dim);margin:8px 0">${correct} correct, ${wrong} wrong, best streak: ${bestStreak}</p><p style="margin:12px 0">${msg}</p><div class="btn-row" style="justify-content:center"><button class="btn btn-primary" onclick="resetGame()">Play Again</button></div></div>`;
+    return;
+  }
+  const q=pool[idx]; updateStats();
+  if(mode==="listen") renderListen(q,area);
+  else if(mode==="flash") renderFlash(q,area);
+  else if(mode==="type") renderType(q,area);
+  else renderMC(q,area);
+}
 
+// --- Multiple Choice ---
+function renderMC(q, area) {
+  const {shuffled, correctIdx}=shuffleChoices(q);
+  area.innerHTML=buildCard(q, `<div class="choices">${buildChoiceButtons(shuffled)}</div>`);
+  wireChoiceButtons(area, correctIdx, esc(shuffled[correctIdx]));
+}
+
+// --- Type the Command ---
+function renderType(q, area) {
+  const inner=`<input class="type-input" id="type-ans" placeholder="Type your answer..." autocomplete="off" spellcheck="false"><div class="type-hint">Include the key command or flag &mdash; partial matches accepted</div>`;
+  const btns=`<button class="btn btn-secondary" id="show-btn" onclick="showAns()">Show Answer</button><button class="btn btn-submit" id="check-btn" onclick="checkType()">Check</button>`;
+  area.innerHTML=buildCard(q, inner, btns);
+  const inp=document.getElementById("type-ans"); inp.focus();
+  inp.onkeydown=e=>{if(e.key==="Enter"){if(answered)nextQ();else checkType();}};
+}
+function checkType() {
+  if(answered)return;
+  const val=document.getElementById("type-ans").value.trim().toLowerCase(), q=pool[idx];
+  const hit=q.accept.some(kw=>val.includes(kw.toLowerCase()));
+  const correctText=`<div class="code-block">${esc(q.typed)}</div>`;
+  scoreAnswer(hit, correctText, {inputId:"type-ans", hideIds:["check-btn","show-btn"]});
+}
+function showAns() {
+  if(answered)return;
+  const q=pool[idx];
+  scoreAnswer(false, `<div class="code-block">${esc(q.typed)}</div>`, {inputId:"type-ans", hideIds:["check-btn","show-btn"]});
+}
+
+// --- Flashcards ---
+function renderFlash(q, area) {
+  flipped=false;
+  const inner=`<div class="flashcard" id="flashcard" onclick="flipCard()"><div id="flash-q">${q.q}</div><div id="flash-a" style="display:none" class="flashcard-answer"><div class="code-block">${esc(q.typed)}</div></div><div class="flip-hint" id="flash-hint">Click or press Space to reveal</div></div>`;
+  const btns=`<span id="flash-btns" style="display:none"><button class="btn btn-secondary" style="border-color:var(--red);color:var(--red)" onclick="flashRate(false)">Didn't Know</button><button class="btn btn-secondary" style="border-color:var(--green);color:var(--green)" onclick="flashRate(true)">Knew It</button></span>`;
+  area.innerHTML=buildCard(q, inner, btns);
+}
+function flipCard(){if(flipped)return;flipped=true;document.getElementById("flash-a").style.display="block";document.getElementById("flash-hint").style.display="none";document.getElementById("flash-btns").style.display="inline";}
+function flashRate(knew){
+  scoreAnswer(knew, esc(pool[idx].typed));
+  nextQ();
+}
+
+// --- Listen mode ---
+let listenRepeatCtx=null;
+
+function buildListenText(q,shuffled){
+  const letters=["A","B","C","D"];
+  return stripHtml(q.q)+". "+shuffled.map((c,i)=>`${letters[i]}. ${stripHtml(c)}`).join(". ");
+}
+
+async function renderListen(q, area){
+  if(mode!=="listen") return;
+  const {shuffled, correctIdx}=shuffleChoices(q);
+  const hasMic=!!SpeechRec;
+  const micInfo=hasMic?'Reading question\u2026':'Reading question\u2026 (tap to answer)';
+  const micHtml=`<div class="mic-wrap"><div class="mic-dot idle" id="mic-dot"></div><span class="mic-label" id="mic-label">${micInfo}</span></div><div class="listen-status" id="listen-status"></div>`;
+  const extraBtns=`<button class="btn btn-secondary" id="repeat-btn" style="display:none" onclick="repeatListen()">Repeat</button>`;
+  area.innerHTML=buildCard(q, `<div class="choices">${buildChoiceButtons(shuffled)}</div>${micHtml}`, extraBtns);
+
+  wireChoiceButtons(area, correctIdx, esc(shuffled[correctIdx]), {speak:true, hideIds:["repeat-btn"]});
+
+  listenRepeatCtx={q,shuffled,correctIdx};
+  await speak(buildListenText(q,shuffled));
+  if(mode!=="listen") return;
+
+  const repeatBtn=document.getElementById("repeat-btn");
+  if(repeatBtn) repeatBtn.style.display="inline-block";
+
+  if(hasMic) startVoiceListen(shuffled,correctIdx);
+  else setMicLabel("Tap your answer");
+}
+
+async function repeatListen(){
+  if(!listenRepeatCtx||mode!=="listen"||answered) return;
+  const {q,shuffled,correctIdx}=listenRepeatCtx;
+  speechSynthesis.cancel();
+  if(listenVoice._rec) try{listenVoice._rec.abort();}catch(e){}
+  setMicLabel("Repeating\u2026");
+  await speak(buildListenText(q,shuffled));
+  if(mode!=="listen"||answered) return;
+  if(SpeechRec) startVoiceListen(shuffled,correctIdx);
+  else setMicLabel("Tap your answer");
+}
+
+async function startVoiceListen(shuffled,correctIdx){
+  const dot=document.getElementById("mic-dot");
+  if(dot) dot.classList.remove("idle");
+  setMicLabel("Listening\u2026 say A, B, C, or D");
+
+  const picked=await listenVoice(shuffled);
+  if(mode!=="listen"||answered) return;
+  if(dot) dot.classList.add("idle");
+
+  if(picked>=0&&picked<shuffled.length){
+    setMicLabel("Processing\u2026");
+    const btns=document.querySelectorAll(".choice-btn");
+    btns[picked].classList.add("voice-pick");
+    await new Promise(r=>setTimeout(r,400));
+    if(mode!=="listen"||answered) return;
+    scoreAnswer(picked===correctIdx, esc(shuffled[correctIdx]),
+      {highlightCorrect:correctIdx, highlightChosen:picked, speak:true, hideIds:["repeat-btn"]});
+  } else {
+    setMicLabel("Didn't catch that \u2014 tap a choice or say Repeat");
+  }
+}
+
+function setMicLabel(txt){ const el=document.getElementById("mic-label"); if(el) el.textContent=txt; }
+
+// --- Navigation ---
+function nextQ(){idx++;answered=false;flipped=false;listenRepeatCtx=null;if(mode==="listen")stopListenCleanup();render();}
+
+// --- Mode switching ---
 document.querySelectorAll(".mode-btn").forEach(btn=>{btn.onclick=()=>{
   stopListenCleanup();
   document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active"); mode=btn.dataset.mode; applyTheme(mode); resetGame();
 }});
 
+// --- Keyboard shortcuts ---
 document.addEventListener("keydown",e=>{
   if(e.target.tagName==="INPUT")return;
-  if(e.key>="1"&&e.key<="4"&&mode==="mc"&&!answered){const btns=document.querySelectorAll(".choice-btn");const i=parseInt(e.key)-1;if(btns[i])btns[i].click();}
+  if(e.key>="1"&&e.key<="4"&&(mode==="mc"||mode==="listen")&&!answered){const btns=document.querySelectorAll(".choice-btn");const i=parseInt(e.key)-1;if(btns[i])btns[i].click();}
   if((e.key===" "||e.key==="Enter")&&!e.target.closest("button")){e.preventDefault();if(mode==="flash"&&!flipped)flipCard();else if(answered)nextQ();}
   if((e.key==="r"||e.key==="R")&&e.target.tagName!=="INPUT")resetGame();
 });
