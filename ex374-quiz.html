@@ -661,7 +661,7 @@ function speak(text){
   return new Promise(resolve=>{
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(stripHtml(text));
-    u.rate=1.05; u.onend=resolve; u.onerror=resolve;
+    u.lang="en-US"; u.rate=1.05; u.onend=resolve; u.onerror=resolve;
     speechSynthesis.speak(u);
   });
 }
@@ -674,25 +674,26 @@ function listenVoice(choices){
     const rec=new SpeechRec();
     rec.lang="en-US"; rec.interimResults=false; rec.maxAlternatives=3;
     listenVoice._rec=rec;
+    let done=false;
+    const fin=(v)=>{ if(done)return; done=true; clearTimeout(timer); resolve(v); };
     const letters={"a":0,"b":1,"c":2,"d":3,"1":0,"2":1,"3":2,"4":3};
-    const timer=setTimeout(()=>{ rec.abort(); resolve(-1); },60000);
+    const timer=setTimeout(()=>{ rec.abort(); fin(-1); },60000);
     rec.onresult=ev=>{
-      clearTimeout(timer);
       const raw=ev.results[0][0].transcript.toLowerCase().trim();
       const st=document.getElementById("listen-status");
       if(st) st.textContent=`Heard: "${raw}"`;
-      if(letters[raw]!==undefined){ resolve(letters[raw]); return; }
+      if(letters[raw]!==undefined){ fin(letters[raw]); return; }
       const choicesLower=choices.map(c=>stripHtml(c).toLowerCase());
       for(let i=0;i<choicesLower.length;i++){
-        if(raw.includes(choicesLower[i])||choicesLower[i].includes(raw)){ resolve(i); return; }
+        if(raw.includes(choicesLower[i])||choicesLower[i].includes(raw)){ fin(i); return; }
       }
       for(const [k,v] of Object.entries(letters)){
-        if(raw.startsWith(k)){ resolve(v); return; }
+        if(raw.startsWith(k)){ fin(v); return; }
       }
-      resolve(-1);
+      fin(-1);
     };
-    rec.onerror=()=>{ clearTimeout(timer); resolve(-1); };
-    rec.onend=()=>{ clearTimeout(timer); };
+    rec.onerror=()=>fin(-1);
+    rec.onend=()=>fin(-1);
     rec.start();
   });
 }
