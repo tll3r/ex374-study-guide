@@ -839,9 +839,9 @@ function speak(text){
 }
 
 // --- Choice button builder (shared by MC and Listen) ---
-function buildChoiceButtons(shuffled){
-  const letters=["A","B","C","D"];
-  return shuffled.map((c,i)=>`<button class="choice-btn" data-idx="${i}"><span class="choice-letter">${letters[i]}</span>${esc(c)}</button>`).join("");
+function buildChoiceButtons(shuffled, useNumbers){
+  const labels = useNumbers ? ["1","2","3","4"] : ["A","B","C","D"];
+  return shuffled.map((c,i)=>`<button class="choice-btn" data-idx="${i}"><span class="choice-letter">${labels[i]}</span>${esc(c)}</button>`).join("");
 }
 function wireChoiceButtons(area, correctIdx, correctText, opts={}){
   area.querySelectorAll(".choice-btn").forEach(btn=>{
@@ -912,8 +912,8 @@ function flashRate(knew){
 let listenRepeatCtx=null;
 
 function buildListenText(q,shuffled){
-  const letters=["A","B","C","D"];
-  return stripHtml(q.q)+". "+shuffled.map((c,i)=>`${letters[i]}. ${stripHtml(c)}`).join(". ");
+  const labels=["1","2","3","4"];
+  return stripHtml(q.q)+". "+shuffled.map((c,i)=>`${labels[i]}. ${stripHtml(c)}`).join(". ");
 }
 
 async function renderListen(q, area){
@@ -921,7 +921,7 @@ async function renderListen(q, area){
   const {shuffled, correctIdx}=shuffleChoices(q);
   const statusHtml=`<div class="listen-info" id="listen-info">Reading question\u2026</div>`;
   const extraBtns=`<button class="btn btn-secondary" id="repeat-btn" style="display:none" onclick="repeatListen()">Repeat</button>`;
-  area.innerHTML=buildCard(q, `<div class="choices">${buildChoiceButtons(shuffled)}</div>${statusHtml}`, extraBtns);
+  area.innerHTML=buildCard(q, `<div class="choices">${buildChoiceButtons(shuffled, true)}</div>${statusHtml}`, extraBtns);
 
   wireChoiceButtons(area, correctIdx, esc(shuffled[correctIdx]), {speak:true, hideIds:["repeat-btn"]});
 
