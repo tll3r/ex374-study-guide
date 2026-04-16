@@ -134,6 +134,16 @@
   .key-hints { text-align: center; margin-top: 12px; font-size: 0.75rem; color: var(--text-dim); }
   .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
   .empty-state h2 { color: var(--text); margin-bottom: 8px; }
+  .mic-wrap { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px 0 8px; }
+  .mic-dot {
+    width: 14px; height: 14px; border-radius: 50%; background: var(--accent);
+    animation: mic-pulse 1.2s ease-in-out infinite;
+  }
+  .mic-dot.idle { animation: none; opacity: 0.35; }
+  .mic-label { font-size: 0.85rem; color: var(--text-dim); }
+  @keyframes mic-pulse { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
+  .listen-status { text-align: center; color: var(--text-dim); font-size: 0.8rem; margin-top: 4px; min-height: 1.2em; }
+  .choice-btn.voice-pick { border-color: var(--accent); background: var(--accent-glow); transform: translateX(4px); }
   @media (max-width: 600px) {
     .container { padding: 12px; }
     .card { padding: 20px; }
@@ -160,6 +170,7 @@
     <button class="mode-btn active" data-mode="mc">Multiple Choice</button>
     <button class="mode-btn" data-mode="type">Type the Command</button>
     <button class="mode-btn" data-mode="flash">Flashcards</button>
+    <button class="mode-btn" data-mode="listen">Listen</button>
   </div>
   <div class="categories" id="cat-filters"></div>
   <div id="game-area"></div>
@@ -173,6 +184,7 @@ const themes = {
   mc:    {bg:"#0f1117",surface:"#1a1d27",surface2:"#242836",border:"#2e3345",accent:"#6c5ce7",accentGlow:"#6c5ce744"},
   type:  {bg:"#0b1519",surface:"#13222a",surface2:"#1b3040",border:"#254050",accent:"#0abde3",accentGlow:"#0abde344"},
   flash: {bg:"#17130f",surface:"#261f17",surface2:"#352b20",border:"#4a3d2e",accent:"#f0932b",accentGlow:"#f0932b44"},
+  listen:{bg:"#0f1319",surface:"#171d2a",surface2:"#1f2838",border:"#2a3650",accent:"#e056a0",accentGlow:"#e056a044"},
 };
 function applyTheme(m) {
   const t = themes[m];
@@ -591,7 +603,8 @@ function render() {
     return;
   }
   const q=pool[idx]; updateStats();
-  if(mode==="flash") renderFlash(q,area);
+  if(mode==="listen") renderListen(q,area);
+  else if(mode==="flash") renderFlash(q,area);
   else if(mode==="type") renderType(q,area);
   else renderMC(q,area);
 }
@@ -642,10 +655,128 @@ function renderFlash(q, area) {
 function flipCard(){if(flipped)return;flipped=true;document.getElementById("flash-a").style.display="block";document.getElementById("flash-hint").style.display="none";document.getElementById("flash-btns").style.display="flex";}
 function flashRate(knew){if(knew){correct++;streak++;if(streak>bestStreak)bestStreak=streak;}else{wrong++;streak=0;}answered=true;updateStats();nextQ();}
 
-function nextQ(){idx++;answered=false;flipped=false;render();}
+// --- TTS helper ---
+function stripHtml(s){ const d=document.createElement("div"); d.innerHTML=s; return d.textContent||""; }
+function speak(text){
+  return new Promise(resolve=>{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(stripHtml(text));
+    u.rate=1.05; u.onend=resolve; u.onerror=resolve;
+    speechSynthesis.speak(u);
+  });
+}
+
+// --- STT helper ---
+const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;
+function listenVoice(choices){
+  return new Promise((resolve)=>{
+    if(!SpeechRec){ resolve(-1); return; }
+    const rec=new SpeechRec();
+    rec.lang="en-US"; rec.interimResults=false; rec.maxAlternatives=3;
+    listenVoice._rec=rec;
+    const letters={"a":0,"b":1,"c":2,"d":3,"1":0,"2":1,"3":2,"4":3};
+    const timer=setTimeout(()=>{ rec.abort(); resolve(-1); },8000);
+    rec.onresult=ev=>{
+      clearTimeout(timer);
+      const raw=ev.results[0][0].transcript.toLowerCase().trim();
+      const st=document.getElementById("listen-status");
+      if(st) st.textContent=`Heard: "${raw}"`;
+      if(letters[raw]!==undefined){ resolve(letters[raw]); return; }
+      const choicesLower=choices.map(c=>stripHtml(c).toLowerCase());
+      for(let i=0;i<choicesLower.length;i++){
+        if(raw.includes(choicesLower[i])||choicesLower[i].includes(raw)){ resolve(i); return; }
+      }
+      for(const [k,v] of Object.entries(letters)){
+        if(raw.startsWith(k)){ resolve(v); return; }
+      }
+      resolve(-1);
+    };
+    rec.onerror=()=>{ clearTimeout(timer); resolve(-1); };
+    rec.onend=()=>{ clearTimeout(timer); };
+    rec.start();
+  });
+}
+function stopListenCleanup(){
+  speechSynthesis.cancel();
+  if(listenVoice._rec) try{listenVoice._rec.abort();}catch(e){}
+  listenVoice._rec=null;
+}
+
+// --- Listen mode renderer ---
+async function renderListen(q, area){
+  if(mode!=="listen") return;
+  const {shuffled, correctIdx}=shuffleChoices(q);
+  const letters=["A","B","C","D"];
+  let html=shuffled.map((c,i)=>`<button class="choice-btn" data-idx="${i}"><span class="choice-letter">${letters[i]}</span>${esc(c)}</button>`).join("");
+  area.innerHTML=`<div class="card"><div class="card-cat">${q.cat}</div><div class="card-q">${q.q}</div><div class="choices">${html}</div><div class="mic-wrap"><div class="mic-dot idle" id="mic-dot"></div><span class="mic-label" id="mic-label">Reading question…</span></div><div class="listen-status" id="listen-status"></div><div class="feedback" id="feedback"></div><div class="btn-row"><button class="btn btn-primary" id="next-btn" style="display:none" onclick="nextQ()">Next →</button></div></div>`;
+
+  const qText=stripHtml(q.q);
+  const choiceText=shuffled.map((c,i)=>`${letters[i]}. ${stripHtml(c)}`).join(". ");
+  await speak(qText+". "+choiceText);
+  if(mode!=="listen") return;
+
+  const dot=document.getElementById("mic-dot");
+  const lbl=document.getElementById("mic-label");
+  if(dot) dot.classList.remove("idle");
+  if(lbl) lbl.textContent="Listening… say A, B, C, or D";
+
+  const picked=await listenVoice(shuffled);
+  if(mode!=="listen") return;
+  if(dot) dot.classList.add("idle");
+  if(lbl) lbl.textContent="Processing…";
+
+  if(picked>=0&&picked<shuffled.length){
+    const btns=document.querySelectorAll(".choice-btn");
+    btns[picked].classList.add("voice-pick");
+    await new Promise(r=>setTimeout(r,400));
+    if(mode!=="listen") return;
+    answerListen(correctIdx,picked,q,shuffled);
+  } else {
+    if(lbl) lbl.textContent="Didn't catch that — tap a choice or wait…";
+    area.querySelectorAll(".choice-btn").forEach(btn=>{
+      btn.onclick=()=>answerListen(correctIdx,parseInt(btn.dataset.idx),q,shuffled);
+    });
+    await new Promise(r=>setTimeout(r,5000));
+    if(mode!=="listen"||answered) return;
+    answerListen(correctIdx,-1,q,shuffled);
+  }
+}
+
+function answerListen(correctIdx,chosen,q,shuffled){
+  if(answered) return; answered=true;
+  const btns=document.querySelectorAll(".choice-btn");
+  btns.forEach(b=>b.classList.add("locked"));
+  btns[correctIdx].classList.add("correct");
+  const fb=document.getElementById("feedback");
+  const lbl=document.getElementById("mic-label");
+  let sayText;
+  if(chosen===correctIdx){
+    correct++;streak++;if(streak>bestStreak)bestStreak=streak;
+    fb.className="feedback show correct-fb"; fb.textContent="Correct!";
+    sayText="Correct!";
+  } else {
+    wrong++;streak=0;
+    if(chosen>=0) btns[chosen].classList.add("wrong");
+    const ans=stripHtml(shuffled[correctIdx]);
+    fb.className="feedback show wrong-fb";
+    fb.innerHTML=`<strong>${roast()}</strong><br>The answer is: <strong>${esc(shuffled[correctIdx])}</strong>`;
+    sayText="Wrong. The answer is "+ans;
+  }
+  if(lbl) lbl.textContent="";
+  document.getElementById("next-btn").style.display="inline-block";
+  updateStats();
+  speak(sayText).then(()=>{
+    if(mode==="listen"&&answered){
+      setTimeout(()=>{ if(mode==="listen") nextQ(); },800);
+    }
+  });
+}
+
+function nextQ(){idx++;answered=false;flipped=false;if(mode==="listen")stopListenCleanup();render();}
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
 document.querySelectorAll(".mode-btn").forEach(btn=>{btn.onclick=()=>{
+  stopListenCleanup();
   document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active"); mode=btn.dataset.mode; applyTheme(mode); resetGame();
 }});
