@@ -675,7 +675,7 @@ function listenVoice(choices){
     rec.lang="en-US"; rec.interimResults=false; rec.maxAlternatives=3;
     listenVoice._rec=rec;
     const letters={"a":0,"b":1,"c":2,"d":3,"1":0,"2":1,"3":2,"4":3};
-    const timer=setTimeout(()=>{ rec.abort(); resolve(-1); },8000);
+    const timer=setTimeout(()=>{ rec.abort(); resolve(-1); },60000);
     rec.onresult=ev=>{
       clearTimeout(timer);
       const raw=ev.results[0][0].transcript.toLowerCase().trim();
@@ -736,7 +736,7 @@ async function renderListen(q, area){
     area.querySelectorAll(".choice-btn").forEach(btn=>{
       btn.onclick=()=>answerListen(correctIdx,parseInt(btn.dataset.idx),q,shuffled);
     });
-    await new Promise(r=>setTimeout(r,5000));
+    await new Promise(r=>setTimeout(r,60000));
     if(mode!=="listen"||answered) return;
     answerListen(correctIdx,-1,q,shuffled);
   }
