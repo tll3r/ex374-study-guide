@@ -20,8 +20,6 @@ This project is not a substitute for proper training. If you are serious about p
 
 You can verify my certification status here: [Red Hat Certification ID 250-146-230](https://rhtapps.redhat.com/verify?certId=250-146-230)
 
-Red Hat and Ansible are trademarks of Red Hat, Inc.
-
 ## Contributing
 
 Feel free to open issues or PRs if you spot errors or want to add questions.
